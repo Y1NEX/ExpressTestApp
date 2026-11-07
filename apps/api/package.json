@@ -1,0 +1,40 @@
+{
+  "name": "@snippet/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "owner:create": "tsx scripts/create-owner.ts",
+    "smoke": "tsx scripts/smoke.ts",
+    "test:integration": "tsx scripts/test-integration.ts"
+  },
+  "dependencies": {
+    "@snippet/contracts": "0.1.0",
+    "@snippet/database": "0.1.0",
+    "connect-pg-simple": "^10.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.0.0",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.0.0",
+    "express-session": "^1.18.0",
+    "helmet": "^8.0.0",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0",
+    "pg": "^8.0.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/connect-pg-simple": "^7.0.0",
+    "@types/cors": "^2.8.0",
+    "@types/express": "^5.0.0",
+    "@types/express-session": "^1.18.0",
+    "@types/passport": "^1.0.0",
+    "@types/passport-local": "^1.0.0",
+    "@types/pg": "^8.0.0",
+    "@types/supertest": "^6.0.0",
+    "supertest": "^7.0.0"
+  }
+}

@@ -1,0 +1,55 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Category {
+  GIT
+  DOCKER
+  SQL
+  JAVASCRIPT
+  TYPESCRIPT
+  OTHER
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique @db.VarChar(254)
+  passwordHash String    @map("password_hash")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  snippets     Snippet[]
+
+  @@map("users")
+}
+
+model Snippet {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerId   String   @map("owner_id") @db.Uuid
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title     String   @db.VarChar(120)
+  content   String
+  category  Category @default(OTHER)
+  favorite  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([ownerId, updatedAt, id])
+  @@index([ownerId, category])
+  @@map("snippets")
+}
+
+// Columns expected by connect-pg-simple. Migration owns table creation.
+model Session {
+  sid    String   @id @db.VarChar
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire])
+  @@map("sessions")
+}
