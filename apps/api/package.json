@@ -12,6 +12,7 @@
     "test:integration": "tsx scripts/test-integration.ts"
   },
   "dependencies": {
+    "@itsezz/try-catch": "^1.5.0",
     "@snippet/contracts": "0.1.0",
     "@snippet/database": "0.1.0",
     "connect-pg-simple": "^10.0.0",

@@ -8,6 +8,7 @@ export function createDatabase(connectionString: string) {
     connectionString,
     max: 5,
     connectionTimeoutMillis: 5000,
+    statement_timeout: 5000,
   });
   return new PrismaClient({ adapter });
 }

@@ -5,10 +5,11 @@
 1. **README:** Ziel, Standardverhalten, Startbefehle und Grenzen prüfen.
 2. **`packages/database/prisma/schema.prisma`:** Beziehungen und Feldtypen ansehen; anschließend die initiale SQL-Migration lesen.
 3. **`packages/contracts/src/index.ts`:** Create- und PATCH-Schema vergleichen. Welche Defaults wären bei einem Update gefährlich?
-4. **`apps/api/src/snippets/service.ts`:** Besitzerfilter, Pagination und Update in einem Datenbankbefehl nachvollziehen.
+4. **Service und Repository:** DTO-Konvertierung in `snippets/service.ts`, danach Besitzerfilter, Pagination und atomare Updates in `snippets/repository.ts` nachvollziehen.
 5. **Auth und `app.ts`:** Login, Session-Regenerierung, CSRF und Middleware-Reihenfolge ansehen.
 6. **Integrationstests:** Besonders „updates one field“, „favorite to false“, „invalid PATCH“ und „isolates … by owner“ lesen.
-7. **[Lern-Doku](BACKEND.md):** Erklärungen und kleine Erweiterungsaufgaben durcharbeiten.
+7. **Globale Fehlergrenze:** `http/async-handler.ts`, `http/prisma-errors.ts` und `http/error-handler.ts` zusammen mit den Fehlerpfadtests lesen.
+8. **[Lern-Doku](BACKEND.md):** Erklärungen und kleine Erweiterungsaufgaben durcharbeiten.
 
 ## Selbst ausprobieren
 
@@ -31,25 +32,29 @@ Prüfe insbesondere:
 
 ## Tatsächlich durchgeführte lokale Prüfungen
 
-Prüfdatum: 7. November 2026. Node.js `22.17.1`, npm `10.9.2`, native PostgreSQL-Testinstanz `17.11` auf Windows.
+Erneuter vollständiger Review: **8. November 2026**. Node.js `22.17.1`, npm `10.9.2`, PostgreSQL `17.11` aus dem Docker-Compose-Service auf Windows.
 
 | Prüfung                                                           | Ergebnis                                                                   |
 | ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | TypeScript-Build aller drei Workspaces                            | erfolgreich                                                                |
 | Zusätzliche Typprüfung von Tests, Konfiguration und Hilfsskripten | erfolgreich                                                                |
-| Unit-Tests                                                        | 37 erfolgreich                                                             |
-| Integrationstests mit PostgreSQL und echtem HTTP-Server           | 56 erfolgreich                                                             |
+| Vertrags-/Unit-/Middleware-Tests                                  | 84 erfolgreich                                                             |
+| Integrationstests mit PostgreSQL und echtem HTTP-Server           | 66 erfolgreich                                                             |
 | API separat mit `npm start` gestartet                             | erfolgreich                                                                |
 | Live-Smoke-Test gegen diesen Prozess                              | 16 HTTP-Prüfungen erfolgreich                                              |
 | Initiale Migration und erneutes Provisionieren des Owners         | erfolgreich; Passwort nicht überschrieben                                  |
-| Native Sicherung und Restore in neue Datenbank                    | erfolgreich                                                                |
+| Docker-Sicherung und Restore in neue Datenbank                    | erfolgreich; automatischer Inhaltstest in `npm test`                       |
 | Restore-Inhalt                                                    | Unicode/Code, Kategorie, Favorit, Nutzer und Migrationstabelle geprüft     |
 | Session-Inhalte im Restore                                        | leer wie vorgesehen                                                        |
 | Falsche Backup-Prüfsumme                                          | Abbruch vor Datenbankanlage                                                |
 | Compose-Konfiguration                                             | `docker compose config --quiet` erfolgreich                                |
 | Laufzeitabhängigkeiten                                            | `npm audit --omit=dev --audit-level=high`: keine gemeldeten Schwachstellen |
 
-**Lokale Einschränkung:** Docker Desktop startet auf diesem Rechner wegen eines internen `dockerInference`-Socket-Fehlers nicht erfolgreich. Deshalb wurden die Datenbank-Lauftests gegen eine portable native PostgreSQL-17-Instanz ausgeführt. Die Docker-Laufstrecke wird zusätzlich durch den GitHub-Workflow geprüft; dessen Status direkt im PR kontrollieren. Portable Testwerkzeuge, Daten, Zugangsdaten und Dumps sind ignoriert und werden nicht eingecheckt.
+**Docker-Start wiederhergestellt:** Der erste Durchgang am 7. November lief wegen eines `dockerInference`-Socket-Fehlers gegen natives PostgreSQL. Beim erneuten Review wurde bei vollständig gestopptem Docker ausschließlich der temporäre Runtime-Ordner unter einem eindeutigen `.stale-…`-Namen erhalten und neu erstellt. Die Engine startete danach; Images, Volumes und Einstellungen wurden erhalten. Dieser Durchgang lief vollständig gegen den lokalen Compose-Service. Ein späteres Wiederauftreten des Docker-/Windows-Problems ist damit nicht grundsätzlich ausgeschlossen.
+
+Zusätzlich geprüft: fehlerhafte Konfiguration und belegter Port am echten Server-Einstiegspunkt, kontrollierter Runtime-Shutdown, Readiness beim Herunterfahren, parallele Owner-Provisionierung, Legacy-Passwort-Upgrade, reale Prisma-Constraint-/Verbindungsfehler, unsupported Charset/Encoding, defektes gzip sowie JSON-Primitive und Nullwerte. Die Logs und Fehlerantworten wurden auf unbeabsichtigte sensible Inhalte geprüft. `npm audit --audit-level=moderate` meldet auch einschließlich Entwicklungswerkzeugen keine Schwachstellen.
+
+Portable Hilfswerkzeuge, Testdaten, Zugangsdaten und Dumps bleiben ignoriert. Die endgültige Docker-CI und ihren Commit direkt im PR prüfen.
 
 ## Bewusste Grenzen
 

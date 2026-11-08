@@ -10,10 +10,15 @@ export const categories = [
 ] as const;
 export const categorySchema = z.enum(categories);
 
-const title = z.string().trim().min(1).max(120);
-// Code keeps its original whitespace; only the emptiness check uses trim().
-const content = z
+const postgresText = z
   .string()
+  .refine(
+    (value) => !value.includes('\0') && !/[\uD800-\uDFFF]/u.test(value),
+    'Use valid Unicode text without null bytes',
+  );
+const title = postgresText.trim().min(1).max(120);
+// Code keeps its original whitespace; only the emptiness check uses trim().
+const content = postgresText
   .min(1)
   .max(50000)
   .refine((value) => value.trim().length > 0, {
@@ -45,12 +50,18 @@ export const updateSnippetSchema = z
 const queryBoolean = z
   .enum(['true', 'false'])
   .transform((value) => value === 'true');
+const queryInteger = (maximum: number) =>
+  z
+    .string()
+    .regex(/^[1-9]\d*$/, 'Use a positive decimal integer')
+    .transform(Number)
+    .pipe(z.number().int().min(1).max(maximum));
 export const listSnippetsSchema = z.strictObject({
-  search: z.string().trim().max(200).optional(),
+  search: postgresText.trim().max(200).optional(),
   category: categorySchema.optional(),
   favorite: queryBoolean.optional(),
-  page: z.coerce.number().int().min(1).max(100000).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  page: queryInteger(100000).default(1),
+  pageSize: queryInteger(100).default(20),
   sortBy: z.enum(['updatedAt', 'createdAt', 'title']).default('updatedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
@@ -81,22 +92,91 @@ export type CreateSnippet = z.infer<typeof createSnippetSchema>;
 export type UpdateSnippet = z.infer<typeof updateSnippetSchema>;
 export type ListSnippets = z.infer<typeof listSnippetsSchema>;
 export type Category = z.infer<typeof categorySchema>;
-export type PublicUser = { id: string; email: string };
-export type Snippet = {
-  id: string;
-  title: string;
-  content: string;
-  category: Category;
-  favorite: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-export type SnippetList = {
-  data: Snippet[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
-};
+export const publicUserSchema = z.strictObject({
+  id: z.uuid(),
+  email: emailSchema,
+});
+export const snippetSchema = z.strictObject({
+  id: z.uuid(),
+  title,
+  content,
+  category: categorySchema,
+  favorite: z.boolean(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+});
+export const snippetResponseSchema = z.strictObject({ data: snippetSchema });
+export const snippetListSchema = z
+  .strictObject({
+    data: z.array(snippetSchema),
+    pagination: z.strictObject({
+      page: z.number().int().min(1),
+      pageSize: z.number().int().min(1).max(100),
+      total: z.number().int().nonnegative(),
+      totalPages: z.number().int().nonnegative(),
+    }),
+  })
+  .superRefine(({ data, pagination }, context) => {
+    if (
+      data.length > pagination.pageSize ||
+      data.length > pagination.total ||
+      pagination.totalPages !==
+        Math.ceil(pagination.total / pagination.pageSize)
+    ) {
+      context.addIssue({ code: 'custom', message: 'Inconsistent pagination' });
+    }
+  });
+export const categoryListResponseSchema = z.strictObject({
+  data: z.array(categorySchema),
+});
+export const csrfResponseSchema = z.strictObject({
+  csrfToken: z.string().regex(/^[a-f0-9]{64}$/),
+});
+export const loginResponseSchema = csrfResponseSchema.extend({
+  user: publicUserSchema,
+});
+export const userResponseSchema = z.strictObject({ user: publicUserSchema });
+export const healthResponseSchema = z.strictObject({ status: z.literal('ok') });
+export const readinessResponseSchema = z.strictObject({
+  status: z.enum(['ready', 'unavailable']),
+});
+
+export const errorCodes = [
+  'VALIDATION_ERROR',
+  'INVALID_JSON',
+  'BAD_REQUEST',
+  'BODY_TOO_LARGE',
+  'JSON_REQUIRED',
+  'UNSUPPORTED_MEDIA_TYPE',
+  'UNSUPPORTED_ENCODING',
+  'UNAUTHENTICATED',
+  'INVALID_CREDENTIALS',
+  'CSRF_INVALID',
+  'ORIGIN_FORBIDDEN',
+  'NOT_FOUND',
+  'SNIPPET_NOT_FOUND',
+  'CONFLICT',
+  'RATE_LIMITED',
+  'DATABASE_UNAVAILABLE',
+  'SERVICE_UNAVAILABLE',
+  'INTERNAL_ERROR',
+] as const;
+export const validationIssueSchema = z.strictObject({
+  path: z.array(z.union([z.string(), z.number()])),
+  message: z.string(),
+});
+export const apiErrorResponseSchema = z.strictObject({
+  error: z.strictObject({
+    code: z.enum(errorCodes),
+    message: z.string(),
+    requestId: z.uuid(),
+    issues: z.array(validationIssueSchema).optional(),
+  }),
+});
+
+export type PublicUser = z.infer<typeof publicUserSchema>;
+export type Snippet = z.infer<typeof snippetSchema>;
+export type SnippetList = z.infer<typeof snippetListSchema>;
+export type ApiErrorCode = (typeof errorCodes)[number];
+export type ValidationIssue = z.infer<typeof validationIssueSchema>;
+export type ApiErrorResponse = z.infer<typeof apiErrorResponseSchema>;

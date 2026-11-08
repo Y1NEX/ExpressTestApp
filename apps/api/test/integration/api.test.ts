@@ -6,6 +6,11 @@ import { createDatabase } from '@snippet/database';
 import { createApp } from '../../src/app.js';
 import { hashPassword } from '../../src/auth/passwords.js';
 import { readConfig } from '../../src/config.js';
+import {
+  apiErrorResponseSchema,
+  snippetResponseSchema,
+  snippetListSchema,
+} from '@snippet/contracts';
 
 const config = readConfig();
 if (
@@ -80,6 +85,9 @@ afterAll(async () => {
       server.close((error) => (error ? reject(error) : resolve())),
     );
   if (application) await application.close();
+  await db.user.deleteMany({
+    where: { id: { in: [ownerId, otherId].filter(Boolean) } },
+  });
   await db.$disconnect();
 });
 
@@ -149,7 +157,9 @@ describe('health and authentication', () => {
       .set('X-CSRF-Token', csrf.body.csrfToken)
       .send({ email: 'absent@example.com', password: 'wrong' })
       .expect(401);
-    expect(wrong.body).toEqual(unknown.body);
+    expect(wrong.body.error.code).toBe(unknown.body.error.code);
+    expect(wrong.body.error.message).toBe(unknown.body.error.message);
+    expect(wrong.body.error.requestId).not.toBe(unknown.body.error.requestId);
   });
   it('rejects missing CSRF token and foreign origin', async () => {
     await agent
@@ -258,6 +268,7 @@ describe('snippet CRUD and PATCH edge cases', () => {
       favorite: false,
     });
     expect(result.body.data.ownerId).toBeUndefined();
+    expect(snippetResponseSchema.safeParse(result.body).success).toBe(true);
     expect(result.headers.location).toBe(
       `/api/snippets/${result.body.data.id}`,
     );
@@ -487,6 +498,7 @@ describe('ownership, list filters, and request errors', () => {
       data: [],
       pagination: { page: 2, pageSize: 20, total: 0, totalPages: 0 },
     });
+    expect(snippetListSchema.safeParse(result.body).success).toBe(true);
   });
   it.each([
     'page=0',
@@ -517,6 +529,7 @@ describe('ownership, list filters, and request errors', () => {
       .send('{')
       .expect(400);
     expect(malformed.body.error.code).toBe('INVALID_JSON');
+    expect(apiErrorResponseSchema.safeParse(malformed.body).success).toBe(true);
     await agent
       .post('/api/snippets')
       .set('X-CSRF-Token', token)

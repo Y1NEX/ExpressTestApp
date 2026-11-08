@@ -20,7 +20,12 @@ function run(script: string, args: string[]) {
   const result = spawnSync(process.execPath, [script, ...args], {
     cwd: root,
     stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: 'test', DATABASE_URL: testUrl.toString() },
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      LOG_LEVEL: 'silent',
+      DATABASE_URL: testUrl.toString(),
+    },
   });
   if (result.error) throw result.error;
   if (result.status !== 0)
@@ -58,6 +63,12 @@ try {
         new URL('../vitest.integration.config.ts', import.meta.url),
       ),
     ],
+  );
+  run(
+    fileURLToPath(
+      new URL('../../../node_modules/tsx/dist/cli.mjs', import.meta.url),
+    ),
+    [fileURLToPath(new URL('./test-backup.ts', import.meta.url))],
   );
 } finally {
   try {

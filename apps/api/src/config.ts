@@ -15,6 +15,7 @@ const envSchema = z.object({
     ),
   SESSION_SECRET: z
     .string()
+    .trim()
     .min(32)
     .refine(
       (value) => !value.startsWith('replace-'),
@@ -25,6 +26,8 @@ const envSchema = z.object({
     .default('development'),
   HOST: z.string().default('127.0.0.1'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  LOG_LEVEL: z.enum(['info', 'warn', 'error', 'silent']).default('info'),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   WEB_ORIGIN: z
     .url()
     .default('http://localhost:5173')

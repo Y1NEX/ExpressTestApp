@@ -51,7 +51,8 @@ if (values.native) {
     values,
     target,
   );
-  child.stdout!.resume();
+  if (!child.stdout) throw new Error('Restore process has no output stream');
+  child.stdout.resume();
   await finished(child);
 } else {
   // The archive stays local; send it to pg_restore in the existing DB container.
@@ -74,8 +75,9 @@ if (values.native) {
     ],
     { cwd: root, stdio: ['pipe', 'inherit', 'inherit'] },
   );
+  if (!child.stdin) throw new Error('Restore process has no input stream');
   await Promise.all([
-    pipeline(createReadStream(file), child.stdin!),
+    pipeline(createReadStream(file), child.stdin),
     finished(child),
   ]);
 }

@@ -1,55 +1,81 @@
 import { Router } from 'express';
-import type { PrismaClient } from '@snippet/database';
 import {
   categories,
   createSnippetSchema,
   listSnippetsSchema,
   snippetIdSchema,
   updateSnippetSchema,
+  snippetResponseSchema,
+  snippetListSchema,
+  categoryListResponseSchema,
 } from '@snippet/contracts';
-import { requireAuth } from '../auth/routes.js';
-import { snippetService } from './service.js';
+import { authenticatedUser, requireAuth } from '../auth/require-auth.js';
+import type { SnippetService } from './service.js';
+import { asyncHandler } from '../http/async-handler.js';
+import { respond } from '../http/respond.js';
 
-export function snippetRoutes(db: PrismaClient) {
+export function snippetRoutes(service: SnippetService) {
   const router = Router();
-  const service = snippetService(db);
   router.use(requireAuth);
-  router.get('/categories', (_req, res) => res.json({ data: categories }));
-  router.get('/', async (req, res) =>
-    res.json(
-      await service.list(req.user!.id, listSnippetsSchema.parse(req.query)),
-    ),
+  router.get('/categories', (_req, res) =>
+    respond(res, categoryListResponseSchema, { data: [...categories] }),
   );
-  router.post('/', async (req, res) => {
-    const snippet = await service.create(
-      req.user!.id,
-      createSnippetSchema.parse(req.body),
-    );
-    res
-      .location(`/api/snippets/${snippet.id}`)
-      .status(201)
-      .json({ data: snippet });
-  });
-  router.get('/:id', async (req, res) => {
-    res.json({
-      data: await service.get(
-        req.user!.id,
+  router.get(
+    '/',
+    asyncHandler(async (req, res) => {
+      respond(
+        res,
+        snippetListSchema,
+        await service.list(
+          authenticatedUser(req).id,
+          listSnippetsSchema.parse(req.query),
+        ),
+      );
+    }),
+  );
+  router.post(
+    '/',
+    asyncHandler(async (req, res) => {
+      const snippet = await service.create(
+        authenticatedUser(req).id,
+        createSnippetSchema.parse(req.body),
+      );
+      res.location(`/api/snippets/${snippet.id}`);
+      respond(res, snippetResponseSchema, { data: snippet }, 201);
+    }),
+  );
+  router.get(
+    '/:id',
+    asyncHandler(async (req, res) => {
+      respond(res, snippetResponseSchema, {
+        data: await service.get(
+          authenticatedUser(req).id,
+          snippetIdSchema.parse(req.params.id),
+        ),
+      });
+    }),
+  );
+  router.patch(
+    '/:id',
+    asyncHandler(async (req, res) => {
+      respond(res, snippetResponseSchema, {
+        data: await service.update(
+          authenticatedUser(req).id,
+          snippetIdSchema.parse(req.params.id),
+          updateSnippetSchema.parse(req.body),
+        ),
+      });
+    }),
+  );
+  router.delete(
+    '/:id',
+    asyncHandler(async (req, res) => {
+      await service.remove(
+        authenticatedUser(req).id,
         snippetIdSchema.parse(req.params.id),
-      ),
-    });
-  });
-  router.patch('/:id', async (req, res) => {
-    res.json({
-      data: await service.update(
-        req.user!.id,
-        snippetIdSchema.parse(req.params.id),
-        updateSnippetSchema.parse(req.body),
-      ),
-    });
-  });
-  router.delete('/:id', async (req, res) => {
-    await service.remove(req.user!.id, snippetIdSchema.parse(req.params.id));
-    res.status(204).end();
-  });
+      );
+      res.status(204).end();
+    }),
+  );
   return router;
 }

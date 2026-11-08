@@ -1,21 +1,25 @@
-import { Router, type RequestHandler } from 'express';
+import { Router } from 'express';
 import type { createPassport } from './passport.js';
 import { rateLimit } from 'express-rate-limit';
-import { loginSchema } from '@snippet/contracts';
-import { HttpError } from '../http/errors.js';
+import {
+  loginSchema,
+  csrfResponseSchema,
+  loginResponseSchema,
+  userResponseSchema,
+} from '@snippet/contracts';
+import { ApplicationError } from '../core/errors.js';
 import { csrfToken } from '../http/csrf.js';
-
-export const requireAuth: RequestHandler = (req, _res, next) => {
-  if (!req.isAuthenticated())
-    return next(new HttpError(401, 'UNAUTHENTICATED', 'Please log in'));
-  next();
-};
+import { authenticatedUser, requireAuth } from './require-auth.js';
+import { respond } from '../http/respond.js';
+import { asyncHandler } from '../http/async-handler.js';
 
 export function authRoutes(
   passport: Awaited<ReturnType<typeof createPassport>>,
 ) {
   const router = Router();
-  router.get('/csrf', (req, res) => res.json({ csrfToken: csrfToken(req) }));
+  router.get('/csrf', (req, res) =>
+    respond(res, csrfResponseSchema, { csrfToken: csrfToken(req) }),
+  );
 
   router.post(
     '/login',
@@ -25,53 +29,50 @@ export function authRoutes(
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       skipSuccessfulRequests: true,
-      handler: (_req, res) => {
-        res.status(429).json({
-          error: {
-            code: 'RATE_LIMITED',
-            message: 'Too many failed login attempts; try again later',
-          },
-        });
-      },
+      handler: (_req, _res, next) => next(new ApplicationError('RATE_LIMITED')),
     }),
-    (req, res, next) => {
+    asyncHandler(async (req, res) => {
       req.body = loginSchema.parse(req.body);
-      passport.authenticate(
-        'local',
-        (error: unknown, user: Express.User | false) => {
-          if (error) return next(error);
-          if (!user)
-            return next(
-              new HttpError(
-                401,
-                'INVALID_CREDENTIALS',
-                'Email or password is incorrect',
-              ),
-            );
-          // Passport regenerates the session on login, preventing session fixation.
-          req.logIn(user, (loginError) => {
-            if (loginError) return next(loginError);
-            const token = csrfToken(req);
-            req.session.save((saveError) => {
-              if (saveError) return next(saveError);
-              res.json({ user, csrfToken: token });
-            });
-          });
+      const user = await new Promise<Express.User | false>(
+        (resolve, reject) => {
+          passport.authenticate(
+            'local',
+            (error: unknown, authenticated: Express.User | false) => {
+              if (error) reject(error);
+              else resolve(authenticated);
+            },
+          )(req, res, reject);
         },
-      )(req, res, next);
-    },
+      );
+      if (!user) throw new ApplicationError('INVALID_CREDENTIALS');
+      // Passport regenerates the session on login, preventing session fixation.
+      await new Promise<void>((resolve, reject) =>
+        req.logIn(user, (error) => (error ? reject(error) : resolve())),
+      );
+      const token = csrfToken(req);
+      await new Promise<void>((resolve, reject) =>
+        req.session.save((error) => (error ? reject(error) : resolve())),
+      );
+      respond(res, loginResponseSchema, { user, csrfToken: token });
+    }),
   );
 
-  router.get('/me', requireAuth, (req, res) => res.json({ user: req.user }));
-  router.post('/logout', requireAuth, (req, res, next) => {
-    req.logout((error) => {
-      if (error) return next(error);
-      req.session.destroy((destroyError) => {
-        if (destroyError) return next(destroyError);
-        res.clearCookie('snippet.sid', { path: '/' });
-        res.status(204).end();
-      });
-    });
-  });
+  router.get('/me', requireAuth, (req, res) =>
+    respond(res, userResponseSchema, { user: authenticatedUser(req) }),
+  );
+  router.post(
+    '/logout',
+    requireAuth,
+    asyncHandler(async (req, res) => {
+      await new Promise<void>((resolve, reject) =>
+        req.logout((error) => (error ? reject(error) : resolve())),
+      );
+      await new Promise<void>((resolve, reject) =>
+        req.session.destroy((error) => (error ? reject(error) : resolve())),
+      );
+      res.clearCookie('snippet.sid', { path: '/' });
+      res.status(204).end();
+    }),
+  );
   return router;
 }

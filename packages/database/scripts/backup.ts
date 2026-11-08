@@ -28,9 +28,10 @@ const child = pgTool(
   values,
 );
 try {
+  if (!child.stdout) throw new Error('Backup process has no output stream');
   // Binary stream avoids PowerShell redirection corrupting a custom-format dump.
   await Promise.all([
-    pipeline(child.stdout!, createWriteStream(temporary, { flags: 'wx' })),
+    pipeline(child.stdout, createWriteStream(temporary, { flags: 'wx' })),
     finished(child),
   ]);
   await rename(temporary, file);

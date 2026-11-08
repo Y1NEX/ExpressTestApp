@@ -9,14 +9,15 @@
     "apps/api"
   ],
   "engines": {
-    "node": ">=22.12 <23 || >=24",
+    "node": ">=22.13 <23 || >=24",
     "npm": ">=10"
   },
   "scripts": {
     "build": "npm run db:generate && npm run build --workspace @snippet/contracts && npm run build --workspace @snippet/database && npm run build --workspace @snippet/api",
     "dev": "npm run build && npm run dev --workspace @snippet/api",
     "start": "npm run start --workspace @snippet/api",
-    "check": "npm run build && tsc -p packages/contracts/tsconfig.check.json && tsc -p packages/database/tsconfig.check.json && tsc -p apps/api/tsconfig.check.json",
+    "lint": "eslint . --max-warnings 0",
+    "check": "npm run lint && npm run build && tsc -p packages/contracts/tsconfig.check.json && tsc -p packages/database/tsconfig.check.json && tsc -p apps/api/tsconfig.check.json",
     "db:generate": "npm run generate --workspace @snippet/database",
     "db:migrate": "npm run migrate --workspace @snippet/database",
     "db:studio": "npm run studio --workspace @snippet/database",
@@ -24,17 +25,23 @@
     "db:restore": "npm run restore --workspace @snippet/database --",
     "owner:create": "npm run owner:create --workspace @snippet/api",
     "smoke": "npm run smoke --workspace @snippet/api",
-    "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "vitest run --config vitest.config.ts",
+    "test": "npm run build && vitest run --config vitest.config.ts && npm run test:integration --workspace @snippet/api",
+    "test:unit": "npm run build && vitest run --config vitest.config.ts",
     "test:integration": "npm run build && npm run test:integration --workspace @snippet/api",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
+  "overrides": {
+    "minimatch": "^11.0.5"
+  },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.0.0",
+    "eslint": "^10.14.0",
     "prettier": "^3.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.0"
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.1.0"
   }
 }

@@ -1,9 +1,10 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Request, RequestHandler } from 'express';
-import { HttpError } from './errors.js';
+import { ApplicationError } from '../core/errors.js';
 
 export function csrfToken(req: Request): string {
-  req.session.csrfToken ??= randomBytes(32).toString('hex');
+  if (!req.session.csrfToken || !/^[a-f0-9]{64}$/.test(req.session.csrfToken))
+    req.session.csrfToken = randomBytes(32).toString('hex');
   return req.session.csrfToken;
 }
 
@@ -12,24 +13,17 @@ export function csrfProtection(allowedOrigin: string): RequestHandler {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
     const origin = req.get('origin');
     if (origin && origin !== allowedOrigin)
-      return next(
-        new HttpError(403, 'ORIGIN_FORBIDDEN', 'Origin is not allowed'),
-      );
+      return next(new ApplicationError('ORIGIN_FORBIDDEN'));
     const supplied = req.get('x-csrf-token');
     const expected = req.session.csrfToken;
     if (
       !supplied ||
       !expected ||
       !/^[a-f0-9]{64}$/.test(supplied) ||
+      !/^[a-f0-9]{64}$/.test(expected) ||
       !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))
     ) {
-      return next(
-        new HttpError(
-          403,
-          'CSRF_INVALID',
-          'Fetch a CSRF token and send it as X-CSRF-Token',
-        ),
-      );
+      return next(new ApplicationError('CSRF_INVALID'));
     }
     next();
   };

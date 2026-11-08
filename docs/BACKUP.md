@@ -69,6 +69,10 @@ Verbindungen verwenden Host, Port, Nutzer und Passwort aus `DATABASE_URL`. Das P
 
 Eine Prüfsumme erkennt Dateiveränderungen, beweist aber keine vertrauenswürdige Herkunft. Nur eigene bzw. vertrauenswürdige Dumps zurückspielen.
 
+## Automatischer Inhaltstest
+
+`npm test` prüft den vollständigen Roundtrip in einer zufällig benannten Testdatenbank: Code mit Einrückung und Unicode, Kategorie, Favorit, Nutzer-Hash, Migrationen und das Auslassen aller Session-Inhalte. Eine absichtlich falsche Prüfsumme muss vor dem Anlegen einer Restore-Datenbank scheitern. Der Test räumt nur seine erzeugten Datenbanken und Dump-Dateien auf. Er läuft lokal und in GitHub Actions.
+
 ## Quellen
 
 - [PostgreSQL: Custom-Dumps mit pg_dump](https://www.postgresql.org/docs/17/app-pgdump.html)

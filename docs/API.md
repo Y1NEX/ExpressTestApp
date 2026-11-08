@@ -123,24 +123,32 @@ Beide liefern `204` ohne Body. Ein gelöschtes oder fremdes Snippet liefert bei 
   "error": {
     "code": "VALIDATION_ERROR",
     "message": "Invalid request",
+    "requestId": "12345678-1234-4234-8234-123456789abc",
     "issues": [{ "path": ["title"], "message": "…" }]
   }
 }
 ```
 
-| HTTP | Bedeutung                                       |
-| ---- | ----------------------------------------------- |
-| 400  | Schemafehler, ungültige UUID oder kaputtes JSON |
-| 401  | Kein Login oder falsche Zugangsdaten            |
-| 403  | CSRF-Token fehlt/falsch oder unerlaubte Origin  |
-| 404  | Route oder eigenes Snippet nicht gefunden       |
-| 413  | Request größer als 512 KB                       |
-| 415  | POST/PATCH benötigt `application/json`          |
-| 429  | Zu viele fehlgeschlagene Logins                 |
-| 500  | Unerwarteter Fehler; Details nur im Serverlog   |
-| 503  | Datenbank für `/ready` nicht erreichbar         |
+| HTTP | Bedeutung                                                         |
+| ---- | ----------------------------------------------------------------- |
+| 400  | Schemafehler, ungültige UUID oder kaputtes JSON                   |
+| 401  | Kein Login oder falsche Zugangsdaten                              |
+| 403  | CSRF-Token fehlt/falsch oder unerlaubte Origin                    |
+| 404  | Route oder eigenes Snippet nicht gefunden                         |
+| 409  | Konflikt mit vorhandenen Daten oder einer parallelen Änderung     |
+| 413  | Request größer als 512 KB                                         |
+| 415  | JSON erforderlich oder Charset/Encoding nicht unterstützt         |
+| 429  | Zu viele fehlgeschlagene Logins                                   |
+| 500  | Unerwarteter Fehler; Details nur im Serverlog                     |
+| 503  | Datenbank vorübergehend nicht verfügbar oder Instanz nicht bereit |
 
 Bei mehreren gleichzeitig ungültigen Eigenschaften entscheidet die Middleware-Reihenfolge: beispielsweise kann fehlender CSRF-Schutz vor der Payload-Validierung `403` liefern.
+
+Jede API-Antwort enthält `X-Request-Id`; Fehler verwenden denselben Wert im Body. Bei `503` aus dem globalen Handler wird `Retry-After: 5` gesetzt. Die Readiness-Antwort bleibt der einfache Statusvertrag. Passwörter, SQL, Tabellen-/Constraint-Namen und Stacks erscheinen nicht in Fehlerantworten. Datenbankkonflikte ergeben `409`; vorübergehende Datenbankfehler ergeben `503`.
+
+Auch ausgehende Antworten werden mit den gemeinsamen Zod-Verträgen geprüft. Eine kaputte Serverantwort ist `500 INTERNAL_ERROR`, kein Eingabefehler des Clients. JSON-Primitiven, Arrays und `null` werden als gültiges JSON eingelesen und anschließend vom Objektschema abgewiesen. Ungültiges komprimiertes JSON wird als Clientfehler behandelt; ein nicht unterstütztes Encoding oder Charset ergibt `415`.
+
+Nullbytes und isolierte Unicode-Surrogate in Titel, Inhalt und Suchtext sind ungültig. `page`/`pageSize` akzeptieren ausschließlich positive dezimale Ziffernfolgen ohne führende Null.
 
 ## Späteres Frontend
 

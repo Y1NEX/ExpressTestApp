@@ -1,30 +1,52 @@
-import { createDatabase } from '@snippet/database';
-import { createApp } from './app.js';
+import { tc, tca } from '@itsezz/try-catch';
 import { readConfig } from './config.js';
+import { createLogger, errorDiagnostics } from './core/logger.js';
+import { startRuntime } from './runtime.js';
 
-const config = readConfig();
-const db = createDatabase(config.DATABASE_URL);
-await db.$connect();
-const application = await createApp(db, config);
-const server = application.app.listen(config.PORT, config.HOST, () => {
-  console.log(`Snippet API listening on http://${config.HOST}:${config.PORT}`);
-});
-
-let closing = false;
-async function shutdown() {
-  if (closing) return;
-  closing = true;
-  const timeout = setTimeout(() => process.exit(1), 10000).unref();
-  server.close(async () => {
-    try {
-      await application.close();
-      await db.$disconnect();
-      clearTimeout(timeout);
-    } catch (error) {
-      console.error('Shutdown failed', error);
-      process.exitCode = 1;
-    }
+const configuration = tc(() => readConfig());
+const logger = createLogger(
+  configuration.ok ? configuration.data.LOG_LEVEL : 'error',
+);
+if (!configuration.ok) {
+  // readConfig intentionally builds this message without configuration values.
+  logger.error('server.config_invalid', {
+    reason:
+      configuration.error instanceof Error
+        ? configuration.error.message
+        : 'Invalid configuration',
   });
+  process.exitCode = 1;
+} else {
+  const config = configuration.data;
+  const started = await tca(() => startRuntime(config, logger));
+  if (!started.ok) {
+    logger.error('server.start_failed', errorDiagnostics(started.error));
+    process.exitCode = 1;
+  } else {
+    const runtime = started.data;
+    logger.info('server.listening', { host: config.HOST, port: config.PORT });
+
+    let closing = false;
+    function shutdown() {
+      if (closing) return;
+      closing = true;
+      const timeout = setTimeout(() => {
+        logger.error('server.shutdown_timeout');
+        runtime.server.closeAllConnections();
+        process.exit(1);
+      }, 10000).unref();
+      void tca(() => runtime.shutdown()).then((result) => {
+        clearTimeout(timeout);
+        if (!result.ok) {
+          logger.error(
+            'server.shutdown_failed',
+            errorDiagnostics(result.error),
+          );
+          process.exitCode = 1;
+        } else logger.info('server.stopped');
+      });
+    }
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+  }
 }
-process.on('SIGINT', () => void shutdown());
-process.on('SIGTERM', () => void shutdown());

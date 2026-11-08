@@ -4,11 +4,13 @@
 
 ```mermaid
 flowchart LR
-    Client --> Session[Session und Passport]
+    Client --> Context[Request-ID und Logs]
+    Context --> Session[Session und Passport]
     Session --> CSRF[CSRF bei Schreibzugriffen]
     CSRF --> Route[Route und Zod]
     Route --> Service[Snippet-Service]
-    Service --> Prisma[Prisma mit PostgreSQL-Adapter]
+    Service --> Repository[Prisma-Repository]
+    Repository --> Prisma[Prisma mit PostgreSQL-Adapter]
     Prisma --> DB[(PostgreSQL)]
 ```
 
@@ -18,12 +20,12 @@ Beispiel: `PATCH /api/snippets/:id`.
 2. Passport liest die Nutzer-ID aus der Session und lädt den öffentlichen Nutzer.
 3. Die CSRF-Middleware prüft Token und gegebenenfalls Browser-Origin.
 4. `snippets/routes.ts` verlangt einen Login und validiert ID sowie Body.
-5. `snippets/service.ts` ändert den Datensatz mit **ID und Besitzer-ID im selben Datenbankbefehl**.
-6. Die Route gibt `{ data: snippet }` zurück. Express wandelt `Date`-Werte dabei in JSON-Zeitstempel um.
+5. `snippets/service.ts` ruft das Repository auf. `snippets/repository.ts` ändert den Datensatz mit **ID und Besitzer-ID im selben Datenbankbefehl**.
+6. Der Service wandelt Datenbank-Dates ausdrücklich in ISO-Strings um. Die Route validiert die gesamte Antwort gegen das gemeinsame Zod-Schema und gibt `{ data: snippet }` zurück.
 
-Die Route kennt HTTP, der Service bekommt bereits validierte Daten. Der Service verwendet für Fehler momentan eine kleine `HttpError`-Klasse. Für eine spätere vollständige Framework-Trennung könnte man eigene Fachfehler einführen und sie erst in der Route auf HTTP abbilden. Für diese kleine App würde eine zusätzliche Abstraktionsschicht wenig bringen.
+Die Route kennt HTTP, der Service bekommt bereits validierte Daten und hängt von einer kleinen Repository-Schnittstelle ab. Er importiert weder Express noch Prisma. Fehlende Datensätze ergeben eine transportunabhängige `ApplicationError`; erst die HTTP-Fehlergrenze erzeugt die JSON-Antwort. Der Service lässt sich so später mit einem Nest-Controller verbinden. Das Repository enthält die konkrete Datenbanktechnik.
 
-**Lesereihenfolge:** `contracts/src/index.ts` → Prisma-Schema → Snippet-Routen → Service → Auth → `app.ts`.
+**Lesereihenfolge:** `contracts/src/index.ts` → Prisma-Schema → Snippet-Routen → Service → Repository → Fehlerhandler → Auth → `app.ts` → `runtime.ts`.
 
 ## 2. Warum Create und PATCH verschiedene Schemas haben
 
@@ -82,7 +84,7 @@ erDiagram
 Sessions haben keinen Prisma-Fremdschlüssel zu Nutzern: `connect-pg-simple` verwaltet sein eigenes JSON-Format; Passport speichert die Nutzer-ID darin. Wurde ein Nutzer inzwischen entfernt, lehnt `deserializeUser` die Session beim nächsten Request ab.
 
 - **UUID:** Prisma erzeugt die ID beim Anlegen. Die Migration setzt dafür keinen SQL-Default. Bei direktem SQL musst du eine ID selbst angeben.
-- **E-Mail:** Zod normalisiert auf Kleinbuchstaben; die Datenbank erzwingt Eindeutigkeit und die normalisierte Form zusätzlich.
+- **E-Mail:** Zod normalisiert auf Kleinbuchstaben; die Datenbank erzwingt Eindeutigkeit und die normalisierte Form zusätzlich. Das Provisionierungsskript verwendet eine transaktionsgebundene Advisory-Lock, damit zwei gleichzeitige Setup-Prozesse mit unterschiedlichen E-Mails nicht beide einen Nutzer anlegen.
 - **Fremdschlüssel:** Ein Snippet braucht einen existierenden Besitzer. Das bleibt auch bei direktem Datenbankzugriff gültig.
 - **Cascade:** Beim bewussten Löschen eines Nutzers auf DB-Ebene verschwinden dessen Snippets. Die App bietet dafür keinen Endpunkt.
 - **Kategorien als Enum:** Kleine feste Menge, ohne Kategorienverwaltung. Eine neue Kategorie braucht SQL-Migration **und** eine Anpassung des öffentlichen Schemas.
@@ -90,6 +92,8 @@ Sessions haben keinen Prisma-Fremdschlüssel zu Nutzern: `connect-pg-simple` ver
 - **Indizes:** Besitzer plus Änderungszeit/ID unterstützen die Standardliste; Besitzer plus Kategorie unterstützen den Kategorie-Filter. Die Teiltextsuche läuft für diese kleine Datenmenge ohne Volltextindex.
 
 Zod ist die benutzerfreundliche Eingabeprüfung. SQL ergänzt zentrale Strukturregeln wie Pflichtfelder, Feldlängen, Fremdschlüssel und Eindeutigkeit. Die SQL-Checks sind bewusst kein vollständiges zweites Zod-Schema.
+
+Die zweite Migration ergänzt eine Check-Constraint gegen ausschließlich aus JavaScript-Whitespace bestehende Inhalte. Einrückungen normaler Code-Texte bleiben erlaubt. Nullbytes und isolierte Unicode-Surrogate werden bereits vor PostgreSQL abgewiesen. Migrationen prüfen bestehende Daten; sie löschen ungültige Bestandsdaten niemals stillschweigend.
 
 Die initiale Migration ist eingecheckt. `npm run db:migrate` führt `prisma migrate deploy` aus und wendet nur fehlende Migrationen an. Änderungen am Schema werden nicht automatisch in eine bestehende Datenbank übertragen.
 
@@ -122,9 +126,9 @@ Query-Booleans sind Strings. `Boolean('false')` wäre **true**. Deshalb akzeptie
 
 ## 6. Passport, Passwort-Hash und Session
 
-1. Das Provisionierungsskript erzeugt mit Node `scrypt` und zufälligem Salt einen Hash. Es speichert kein Klartextpasswort.
+1. Das Provisionierungsskript erzeugt mit Node `scrypt` und zufälligem Salt einen Hash. Es speichert kein Klartextpasswort. Das neue Format enthält die Parameter `N=32768`, `r=8`, `p=3`; der Speicherrahmen ist ausdrücklich begrenzt. Das ist eines der von OWASP beschriebenen Profile.
 2. Die Local-Strategie sucht den Nutzer und vergleicht den berechneten Hash mit `timingSafeEqual`.
-3. Auch eine unbekannte E-Mail führt eine Hashprüfung gegen einen Dummy-Hash aus, um grobe Zeitunterschiede zu reduzieren.
+3. Auch eine unbekannte E-Mail führt eine Hashprüfung gegen einen Dummy-Hash aus, um grobe Zeitunterschiede zu reduzieren. Die bisher angelegten `scrypt:…`-Hashes bleiben verifizierbar und werden nach erfolgreichem Login aktualisiert. Das bedingte Datenbankupdate überschreibt keinen inzwischen anderweitig geänderten Hash.
 4. `req.logIn` regeneriert die Sitzung. Die alte Session-ID wird dadurch nicht zur eingeloggten Session.
 5. Im Cookie steckt eine signierte Session-ID. Sessiondaten liegen serverseitig in PostgreSQL; das ist kein JWT.
 6. Passport speichert nur die Nutzer-ID als Identität und lädt auf folgenden Requests den öffentlichen Nutzer.
@@ -142,11 +146,19 @@ Ein CLI-Client ohne Origin kann zugreifen, muss aber dieselben Cookies und Token
 
 ## 8. Fehler behandeln und Ressourcen schließen
 
-Express 5 reicht Fehler aus zurückgegebenen Promises asynchroner Routen an die Fehler-Middleware weiter. Callback-APIs von Passport und Sessions brauchen weiterhin explizites `next(error)`.
+`@itsezz/try-catch` stellt mit `tca` ein Result bereit: `{ ok: true, data }` oder `{ ok: false, error }`. `asyncHandler` verwendet es einmal an der HTTP-Grenze und leitet Fehler an den globalen Handler. Fachlogik und Repository brauchen dadurch keine wiederholten Catch-Blöcke. Callback-APIs von Passport und Sessions werden zuerst in Promises umgewandelt, damit auch Fehler beim Speichern der Session oder beim Antwortaufbau innerhalb derselben Fehlergrenze liegen.
 
-Die Middleware liefert konsistente JSON-Fehler. Validierungsfehler sind `400`, fehlender Login `401`, fehlende eigene Datensätze `404`. Unerwartete Fehler erscheinen als generische `500`-Antwort; interne Details gehen ins Serverlog.
+`null`, `undefined` und Strings als Rejection werden ausdrücklich zu einem internen Fehler normalisiert. Das ist relevant, weil Express `next(undefined)` als Erfolg und `next('route')` als Routing-Anweisung verstehen würde. Ein Result darf also nicht ungeprüft an `next` weitergereicht werden.
 
-Prisma und der Session-Store verwenden kleine eigene Connection-Pools. Beim Beenden stoppt der Server neue Verbindungen und schließt beide Ressourcen. Deshalb wird Prisma nicht nach jedem einzelnen Request getrennt.
+Der globale Handler trennt Eingabefehler, bekannte Anwendungsfehler, Body-Parser-Fehler und Prisma-/PostgreSQL-Fehler. `http/prisma-errors.ts` übersetzt bekannte Codes. Der echte PostgreSQL-Adapter liefert Constraint-Verletzungen beispielsweise als `P2039` mit SQLSTATE `23514`; der Integrationstest provoziert genau diesen Fehler. Rohes SQL, Constraint-Namen und Provider-Messages werden nicht an den Client gegeben.
+
+Alle Fehler folgen dem gemeinsamen Zod-Vertrag. `requestId` im Body entspricht `X-Request-Id`; sie verbindet die Antwort mit den JSON-Logs. Validierungsfehler sind `400`, Konflikte `409`, vorübergehende Datenbankfehler `503`, unbekannte Fehler `500`. Ein Fehler im ausgehenden Response-Vertrag ist ebenfalls `500`, weil der Client dafür nicht verantwortlich ist.
+
+Die Logs verwenden eine kleine feste Menge von Metadaten. Bodies, Query-Strings, Cookies und ungefilterte Fehlermeldungen werden nicht geschrieben. Die ID wird vom Server erzeugt, damit Client-Header keine Log-Identitäten vortäuschen. Bereits begonnene Antworten werden an Express delegiert; sie können nicht nachträglich in eine neue JSON-Antwort verwandelt werden.
+
+Prisma und der Session-Store verwenden kleine eigene Connection-Pools. `runtime.ts` verwaltet Start und Ressourcen, setzt HTTP-Timeouts und räumt auch bei einem fehlgeschlagenen Port-Bind auf. Beim Beenden wird zuerst Readiness deaktiviert, dann der HTTP-Server und anschließend beide Datenbankressourcen geschlossen. Wiederholtes Herunterfahren verwendet dieselbe Promise. `server.ts` begrenzt den Shutdown auf zehn Sekunden. Datenbank-Statements haben zusätzlich ein Zeitlimit.
+
+**Umfang der Absicherung:** Die getesteten Anwendungs-, Datenbank- und Parserfehler werden kontrolliert behandelt. Prozessabstürze, Betriebssystem-/Docker-Fehler und beliebige zukünftige Programmfehler lassen sich damit nicht ausschließen. Für Hosting kommen HTTPS, ein konkret konfigurierter Proxy, Prozessüberwachung und bei mehreren Instanzen ein gemeinsamer Ratelimit-Store hinzu.
 
 ## Kleine Erweiterungen zum Üben
 
@@ -164,3 +176,5 @@ Eine Erweiterung nach der anderen in einen eigenen PR packen. Die vorhandenen PA
 - [Passport: Sessions](https://www.passportjs.org/concepts/authentication/sessions/)
 - [PostgreSQL: pg_dump](https://www.postgresql.org/docs/17/app-pgdump.html)
 - [PostgreSQL: pg_restore](https://www.postgresql.org/docs/17/app-pgrestore.html)
+- [tca: Result-Pattern und API](https://github.com/itsEzz/try-catch)
+- [OWASP: Passwortspeicherung und scrypt-Profile](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
