@@ -1,0 +1,61 @@
+name: Backend checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SESSION_SECRET: ci-only-session-secret-with-more-than-32-characters
+      OWNER_PASSWORD: ci-only-owner-password-123456
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: cp .env.example .env
+      - run: npm ci
+      - run: docker compose config --quiet
+      - run: docker compose up -d --wait
+      - run: npm run format:check
+      - run: npm run check
+      - run: npm audit --audit-level=moderate
+      - run: npm run db:migrate
+      - run: npm run owner:create
+      - run: npm test
+      - name: Start API and run live smoke checks
+        shell: bash
+        run: |
+          node apps/api/dist/server.js > /tmp/snippet-api.log 2>&1 &
+          api_pid=$!
+          cleanup() {
+            kill -TERM "$api_pid" 2>/dev/null || true
+            wait "$api_pid"
+          }
+          trap cleanup EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/ready > /dev/null; then break; fi
+            sleep 1
+          done
+          npm run smoke
+      - name: Verify Docker backup and restore
+        shell: bash
+        run: |
+          npm run db:backup
+          backup_file=$(find backups -maxdepth 1 -name '*.dump' -print -quit)
+          test -n "$backup_file"
+          npm run db:restore -- --file "$backup_file"
+      - name: Show API log after failure
+        if: failure()
+        run: cat /tmp/snippet-api.log 2>/dev/null || true
+      - name: Stop database
+        if: always()
+        run: docker compose down

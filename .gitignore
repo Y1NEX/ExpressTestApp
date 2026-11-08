@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+packages/database/src/generated/
+backups/
+*.log
+.DS_Store
+.local-testing/
