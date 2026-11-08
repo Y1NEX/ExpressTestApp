@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { tca } from '@itsezz/try-catch';
 import { readConfig } from '../src/config.js';
 
 const config = readConfig();
@@ -33,7 +34,7 @@ function run(script: string, args: string[]) {
 }
 
 let created = false;
-try {
+const result = await tca(async () => {
   await admin.connect();
   // The identifier is generated here, never taken from environment or user input.
   await admin.query(`CREATE DATABASE "${databaseName}"`);
@@ -70,13 +71,16 @@ try {
     ),
     [fileURLToPath(new URL('./test-backup.ts', import.meta.url))],
   );
-} finally {
-  try {
-    if (created) {
-      await admin.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`);
-      console.log('Removed isolated test database.');
-    }
-  } finally {
-    await admin.end();
+});
+const cleanup = await tca(async () => {
+  if (created) {
+    await admin.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`);
+    console.log('Removed isolated test database.');
   }
-}
+});
+const disconnected = await tca(() => admin.end());
+const errors = [result, cleanup, disconnected]
+  .filter((result) => !result.ok)
+  .map((result) => result.error);
+if (errors.length)
+  throw new AggregateError(errors, 'Integration verification failed');

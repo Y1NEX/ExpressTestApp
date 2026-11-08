@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { pipeline } from 'node:stream/promises';
 import pg from 'pg';
+import { tca } from '@itsezz/try-catch';
 import { databaseUrl, finished, pgTool, root, sha256 } from './pg-tools.js';
 
 const { values } = parseArgs({
@@ -29,13 +30,17 @@ const admin = new pg.Client({
   connectionString: adminUrl.toString(),
   connectionTimeoutMillis: 5000,
 });
-try {
+const created = await tca(async () => {
   await admin.connect();
   await admin.query(`CREATE DATABASE "${target}"`);
-} finally {
-  await admin.end();
-}
-console.log(`Created restore database: ${target}`);
+  console.log(`Created restore database: ${target}`);
+});
+const disconnected = await tca(() => admin.end());
+const errors = [created, disconnected]
+  .filter((result) => !result.ok)
+  .map((result) => result.error);
+if (errors.length)
+  throw new AggregateError(errors, 'Restore database setup failed');
 
 let child;
 if (values.native) {

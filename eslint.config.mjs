@@ -23,6 +23,20 @@ export default ts.config(
       ],
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'TryStatement',
+          message:
+            'Use tc/tca from @itsezz/try-catch and explicit cleanup results (test cleanup belongs in lifecycle hooks).',
+        },
+        {
+          selector:
+            "CallExpression[callee.type='MemberExpression'][callee.property.name='catch']",
+          message:
+            'Capture failures with tc/tca from @itsezz/try-catch and inspect the result.',
+        },
+      ],
     },
   },
   {

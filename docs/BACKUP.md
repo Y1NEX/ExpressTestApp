@@ -23,6 +23,8 @@ snippets-<UTC-Zeit>-<Zufallskennung>.dump.sha256
 
 Der Dateiname ist eindeutig. Das Skript schreibt zunächst `.partial` und benennt die Datei erst nach erfolgreichem `pg_dump` um. Die SHA-256-Datei enthält den Hash des vollständigen Dumps. Node transportiert die Binärdaten direkt; eine PowerShell-Textumleitung mit `>` ist nicht beteiligt.
 
+Fehler werden über `tca` erfasst. Das Skript wartet auf Prozess und Dateistream, bevor es eine unvollständige Datei entfernt. Scheitert auch das Aufräumen, werden beide Fehler gemeldet. Eine Erfolgsmeldung gibt es nur nach vollständig erfolgreicher Sicherung.
+
 Die Standardbefehle erwarten den Compose-Service `db`. Host-Verbindung und Container müssen zur selben Datenbank gehören; bei einem anderen PostgreSQL-Server den nativen Modus verwenden.
 
 ## Restore in eine neue Datenbank
@@ -72,6 +74,8 @@ Eine Prüfsumme erkennt Dateiveränderungen, beweist aber keine vertrauenswürdi
 ## Automatischer Inhaltstest
 
 `npm test` prüft den vollständigen Roundtrip in einer zufällig benannten Testdatenbank: Code mit Einrückung und Unicode, Kategorie, Favorit, Nutzer-Hash, Migrationen und das Auslassen aller Session-Inhalte. Eine absichtlich falsche Prüfsumme muss vor dem Anlegen einer Restore-Datenbank scheitern. Der Test räumt nur seine erzeugten Datenbanken und Dump-Dateien auf. Er läuft lokal und in GitHub Actions.
+
+Zusätzlich muss der Backup-Befehl mit Fehlerstatus enden, wenn `pg_dump` fehlt oder der Export scheitert. Dabei dürfen weder neue Dump-Dateien noch `.partial`-Dateien zurückbleiben.
 
 ## Quellen
 

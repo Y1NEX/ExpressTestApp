@@ -9,7 +9,7 @@ This is a small personal learning app. Keep the current scope on the snippet dat
 - `apps/api/src/snippets/routes.ts`: HTTP input validation, authentication context and response contracts.
 - `snippets/service.ts`: application rules and DTO conversion; no Express/Prisma imports.
 - `snippets/repository.ts`: Prisma queries, ownership filters and transactions.
-- Capture failures with `@itsezz/try-catch` (`tca`) at asynchronous boundaries; pass failures to the global handler. Do not silently substitute successful results.
+- Capture failures with `@itsezz/try-catch` (`tca` for async, `tc` for sync) instead of handwritten `try/catch` or Promise `.catch()` chains, including scripts. Pass HTTP failures to the global handler. Inspect every result and preserve cleanup even after a failure; use test lifecycle hooks for fixtures. ESLint enforces the convention. Do not silently substitute successful results.
 - Keep Prisma/provider error translation separate from the global HTTP handler. Return only shared error codes, safe messages and request IDs.
 
 ## Review and validation

@@ -96,23 +96,27 @@ describe('health and authentication', () => {
     await request(server).get('/health').expect(200, { status: 'ok' });
     await request(server).get('/ready').expect(200, { status: 'ready' });
   });
-  it('reports unavailable readiness when PostgreSQL cannot be reached', async () => {
+  it('reports unavailable readiness when PostgreSQL cannot be reached', async ({
+    onTestFinished,
+  }) => {
     const unavailableUrl = new URL(config.DATABASE_URL);
     unavailableUrl.port = '1';
     const unavailableDb = createDatabase(unavailableUrl.toString());
+    onTestFinished(async () => {
+      await unavailableDb.$disconnect();
+    });
     const offline = await createApp(unavailableDb, {
       ...config,
       DATABASE_URL: unavailableUrl.toString(),
     });
-    try {
-      await request(offline.app)
-        .get('/ready')
-        .expect(503, { status: 'unavailable' });
-      await request(offline.app).get('/health').expect(200, { status: 'ok' });
-    } finally {
+    onTestFinished(async () => {
       await offline.close();
-      await unavailableDb.$disconnect();
-    }
+    });
+
+    await request(offline.app)
+      .get('/ready')
+      .expect(503, { status: 'unavailable' });
+    await request(offline.app).get('/health').expect(200, { status: 'ok' });
   });
   it('rejects anonymous list/detail/category access', async () => {
     for (const path of [
@@ -194,28 +198,30 @@ describe('health and authentication', () => {
       .send({ title: 'X', content: 'Y' })
       .expect(401);
   });
-  it('persists sessions across an application restart', async () => {
+  it('persists sessions across an application restart', async ({
+    onTestFinished,
+  }) => {
     const restarted = await createApp(db, config);
-    try {
-      // Use the authenticated session cookie with a second application instance.
-      const loginCsrf = await request(server).get('/api/auth/csrf');
-      const response = await request(server)
-        .post('/api/auth/login')
-        .set('Cookie', responseCookies(loginCsrf))
-        .set('X-CSRF-Token', loginCsrf.body.csrfToken)
-        .send({ email: 'owner@example.com', password })
-        .expect(200);
-      await request(restarted.app)
-        .get('/api/auth/me')
-        .set('Cookie', responseCookies(response))
-        .expect(200);
-      await request(server)
-        .get('/api/auth/me')
-        .set('Cookie', responseCookies(loginCsrf))
-        .expect(401);
-    } finally {
+    onTestFinished(async () => {
       await restarted.close();
-    }
+    });
+
+    // Use the authenticated session cookie with a second application instance.
+    const loginCsrf = await request(server).get('/api/auth/csrf');
+    const response = await request(server)
+      .post('/api/auth/login')
+      .set('Cookie', responseCookies(loginCsrf))
+      .set('X-CSRF-Token', loginCsrf.body.csrfToken)
+      .send({ email: 'owner@example.com', password })
+      .expect(200);
+    await request(restarted.app)
+      .get('/api/auth/me')
+      .set('Cookie', responseCookies(response))
+      .expect(200);
+    await request(server)
+      .get('/api/auth/me')
+      .set('Cookie', responseCookies(loginCsrf))
+      .expect(401);
   });
   it('rejects expired sessions', async () => {
     const csrf = await request(server).get('/api/auth/csrf').expect(200);
@@ -562,27 +568,29 @@ describe('ownership, list filters, and request errors', () => {
 });
 
 describe('login rate limiting', () => {
-  it('limits repeated failed logins with a JSON response', async () => {
+  it('limits repeated failed logins with a JSON response', async ({
+    onTestFinished,
+  }) => {
     // Separate app instance gives this test its own in-memory rate limiter.
     const isolated = await createApp(db, config);
-    try {
-      const client = request.agent(isolated.app);
-      const csrf = await client.get('/api/auth/csrf').expect(200);
-      for (let i = 0; i < 10; i++) {
-        await client
-          .post('/api/auth/login')
-          .set('X-CSRF-Token', csrf.body.csrfToken)
-          .send({ email: 'owner@example.com', password: 'wrong' })
-          .expect(401);
-      }
-      const result = await client
+    onTestFinished(async () => {
+      await isolated.close();
+    });
+
+    const client = request.agent(isolated.app);
+    const csrf = await client.get('/api/auth/csrf').expect(200);
+    for (let i = 0; i < 10; i++) {
+      await client
         .post('/api/auth/login')
         .set('X-CSRF-Token', csrf.body.csrfToken)
         .send({ email: 'owner@example.com', password: 'wrong' })
-        .expect(429);
-      expect(result.body.error.code).toBe('RATE_LIMITED');
-    } finally {
-      await isolated.close();
+        .expect(401);
     }
+    const result = await client
+      .post('/api/auth/login')
+      .set('X-CSRF-Token', csrf.body.csrfToken)
+      .send({ email: 'owner@example.com', password: 'wrong' })
+      .expect(429);
+    expect(result.body.error.code).toBe('RATE_LIMITED');
   });
 });

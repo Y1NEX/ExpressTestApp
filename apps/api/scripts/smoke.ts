@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { ownerCredentialsSchema } from '@snippet/contracts';
+import { tca } from '@itsezz/try-catch';
 import '../src/config.js';
 
 const base = process.env.API_BASE_URL ?? 'http://127.0.0.1:3000';
@@ -36,7 +37,7 @@ async function call(
   return status === 204 ? undefined : await response.json();
 }
 
-try {
+const result = await tca(async () => {
   await call('/health', 200);
   await call('/ready', 200);
   await call('/api/snippets', 401);
@@ -71,9 +72,15 @@ try {
   await call(`/api/snippets/${deletedId}`, 404);
   await call('/api/auth/logout', 204, 'POST', {});
   await call('/api/auth/me', 401);
-  console.log(
-    `Live smoke test passed: ${checks} HTTP checks; temporary snippet removed.`,
-  );
-} finally {
+});
+const cleanup = await tca(async () => {
   if (id) await call(`/api/snippets/${id}`, 204, 'DELETE');
-}
+});
+const errors = [result, cleanup]
+  .filter((result) => !result.ok)
+  .map((result) => result.error);
+if (errors.length)
+  throw new AggregateError(errors, 'Live smoke verification failed');
+console.log(
+  `Live smoke test passed: ${checks} HTTP checks; temporary snippet removed.`,
+);

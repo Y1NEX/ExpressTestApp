@@ -56,6 +56,14 @@ Zusätzlich geprüft: fehlerhafte Konfiguration und belegter Port am echten Serv
 
 Portable Hilfswerkzeuge, Testdaten, Zugangsdaten und Dumps bleiben ignoriert. Die endgültige Docker-CI und ihren Commit direkt im PR prüfen.
 
+### Nachprüfung der konsequenten tca-Nutzung
+
+Am 8. November wurden auch die CLI-Skripte auf `tca` umgestellt und die verbliebenen Test-Cleanup-Blöcke durch Vitest-Hooks ersetzt. ESLint prüft, dass eigener TypeScript-Code keine klassischen `try`-Blöcke oder Promise-`.catch()`-Aufrufe enthält. Siehe [Fehlerbehandlung und Aufräumen](BACKEND.md#8-fehler-behandeln-und-ressourcen-schließen).
+
+Die 150 Tests und der Backup-Roundtrip wurden erneut erfolgreich gegen Docker-PostgreSQL ausgeführt. Zwei zusätzliche Backup-Fehlerfälle prüfen den Fehlerstatus und fehlende Dateireste bei fehlendem `pg_dump` sowie fehlgeschlagenem Export. Manuell geprüfte CLI-Fehlerfälle: ungültige Owner-Zugangsdaten, unerreichbare Datenbank bei Owner-Provisionierung und Integrationstest-Start sowie unerreichbare API beim Smoke-Test. Alle vier Prozesse endeten mit Status 1, ohne falsche Erfolgsmeldung oder Hängenbleiben. Der reguläre Live-Smoke-Test bestand wieder alle 16 HTTP-Prüfungen.
+
+Beim Neustart trat der dokumentierte Docker-Socket-Fehler erneut auf. Der temporäre Runtime-Ordner wurde bei gestopptem Docker erneut gesichert und neu erstellt; danach war der vorhandene PostgreSQL-Container wieder gesund. Dieser Betriebssystem-/Docker-Fehler ist kein Fehler des Backend-Codes.
+
 ## Bewusste Grenzen
 
 - Persönliche lokale App; Hosting/HTTPS und Proxy-Konfiguration kommen separat.

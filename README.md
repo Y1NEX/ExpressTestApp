@@ -89,7 +89,7 @@ Titel, Inhalt und Suchtext lehnen Nullbytes und ungültige Unicode-Surrogate ab,
 
 ## Fehlerbehandlung und Betrieb
 
-- `@itsezz/try-catch` (`tca`) erfasst Fehler an asynchronen Grenzen. Der globale Handler gibt einen gemeinsamen Fehlervertrag mit `code`, sicherer `message` und `requestId` zurück.
+- [`@itsezz/try-catch`](https://github.com/itsEzz/try-catch) (`tca` asynchron, `tc` synchron) erfasst Fehler an den Systemgrenzen, auch in den CLI-Skripten. Der globale HTTP-Handler gibt einen gemeinsamen Fehlervertrag mit `code`, sicherer `message` und `requestId` zurück. ESLint verhindert eigene `try/catch`-Blöcke und Promise-`.catch()`-Ketten.
 - Ein eigener Prisma-Mapper übersetzt bekannte Konflikte, Constraints und Verbindungsfehler. Unbekannte Datenbank-/Programmierfehler bleiben generische `500`-Antworten; SQL und interne Fehlermeldungen werden nicht ausgeliefert.
 - Request- und Fehlerlogs sind strukturiertes JSON. Sie enthalten keine Bodies, Query-Strings, Cookies, Zugangsdaten oder ungefilterten Error-Messages. `LOG_LEVEL` steuert die Ausgabe.
 - `TRUST_PROXY_HOPS=0` vertraut standardmäßig keinem Proxy. Bei späterem Hosting nur setzen, wenn die Netzwerkarchitektur diese feste Hop-Zahl garantiert.
