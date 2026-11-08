@@ -150,6 +150,6 @@ Auch ausgehende Antworten werden mit den gemeinsamen Zod-Verträgen geprüft. Ei
 
 Nullbytes und isolierte Unicode-Surrogate in Titel, Inhalt und Suchtext sind ungültig. `page`/`pageSize` akzeptieren ausschließlich positive dezimale Ziffernfolgen ohne führende Null.
 
-## Späteres Frontend
+## Frontend-Anbindung
 
-`WEB_ORIGIN` ist standardmäßig `http://localhost:5173`. Requests aus dem Frontend brauchen `credentials: 'include'` und für Schreibzugriffe den aktuellen `X-CSRF-Token`. Im lokalen Browser auf beiden Seiten denselben Hostnamen verwenden, etwa Vite unter `localhost:5173` und API unter `localhost:3000`. `127.0.0.1` und `localhost` nicht mischen. Ein Vite-Proxy kann beide später unter einer Origin bereitstellen.
+`WEB_ORIGIN` ist standardmäßig `http://localhost:5173`. Das MUI-Frontend verwendet relative `/api`-Adressen; der Vite-Proxy leitet sie an `127.0.0.1:3000` weiter. Browserzugriffe erfolgen daher über `http://localhost:5173`. Requests verwenden `credentials: 'include'`. Vor Login und Logout wird jeweils ein frischer CSRF-Token geholt und als `X-CSRF-Token` gesendet. Cookies verwaltet der Browser; Passwörter, Session-IDs und Tokens werden nicht im Browser-Storage abgelegt. Details und Erweiterungspunkte stehen in [FRONTEND.md](FRONTEND.md).
