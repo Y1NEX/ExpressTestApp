@@ -222,6 +222,43 @@ test('handles a lost session on reload', async ({ page, context }) => {
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test('applies the dark system palette to login and switches the signed-in page live', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/login');
+  const body = page.locator('body');
+  await expect(page.getByLabel('E-Mail-Adresse')).toBeVisible();
+  await expect(body).toHaveCSS('background-color', 'rgb(16, 20, 18)');
+  await page.screenshot({
+    path: resolve(screenshots, 'login-desktop-dark.png'),
+    fullPage: true,
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: resolve(screenshots, 'login-mobile-dark.png'),
+    fullPage: true,
+  });
+  await signIn(page);
+  const heading = page.getByRole('heading', {
+    name: 'Willkommen in SnippetShelf.',
+  });
+  await expect(body).toHaveCSS('background-color', 'rgb(16, 20, 18)');
+  await page.screenshot({
+    path: resolve(screenshots, 'home-mobile-dark.png'),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({
+    path: resolve(screenshots, 'home-desktop-dark.png'),
+    fullPage: true,
+  });
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(body).toHaveCSS('background-color', 'rgb(245, 247, 246)');
+  await expect(heading).toBeVisible();
+});
+
 test('shows a retry state for an unavailable server instead of exposing the homepage', async ({
   page,
 }) => {

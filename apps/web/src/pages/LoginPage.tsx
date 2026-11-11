@@ -69,14 +69,7 @@ export function LoginPage() {
               Dein Platz für Snippets und Textbausteine.
             </Typography>
           </Box>
-          <Paper
-            variant="outlined"
-            sx={{
-              p: { xs: 3, sm: 4 },
-              boxShadow: '0 12px 40px #20332c06',
-              borderRadius: 3,
-            }}
-          >
+          <Paper variant="outlined" sx={{ p: { xs: 3, sm: 4 } }}>
             <Box
               component="form"
               noValidate

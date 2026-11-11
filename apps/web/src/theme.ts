@@ -1,11 +1,33 @@
 import { createTheme } from '@mui/material/styles';
 
+const focusRing = {
+  outline: '3px solid var(--mui-palette-primary-main)',
+  outlineOffset: 3,
+};
+
 export const theme = createTheme({
-  palette: {
-    primary: { main: '#265a4b', dark: '#194234', light: '#edf5f1' },
-    background: { default: '#f7f8f6', paper: '#ffffff' },
-    text: { primary: '#20332c', secondary: '#617169' },
-    divider: '#e3e9e4',
+  cssVariables: { colorSchemeSelector: 'media' },
+  colorSchemes: {
+    light: {
+      palette: {
+        primary: { main: '#123c2c', dark: '#0d2d21', contrastText: '#ffffff' },
+        secondary: { main: '#3c4340', contrastText: '#ffffff' },
+        background: { default: '#f5f7f6', paper: '#ffffff' },
+        text: { primary: '#19241e', secondary: '#52615a' },
+        divider: '#dbe2de',
+        action: { active: '#7d8982', selected: '#e7efea' },
+      },
+    },
+    dark: {
+      palette: {
+        primary: { main: '#80ba9d', dark: '#6faa8e', contrastText: '#101412' },
+        secondary: { main: '#cad1cd', contrastText: '#101412' },
+        background: { default: '#101412', paper: '#191f1c' },
+        text: { primary: '#f2f5f3', secondary: '#b6c0bb' },
+        divider: '#36413b',
+        action: { active: '#72837a', selected: '#23392f' },
+      },
+    },
   },
   shape: { borderRadius: 12 },
   typography: {
@@ -21,15 +43,23 @@ export const theme = createTheme({
     overline: { fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.13em' },
   },
   components: {
+    MuiButtonBase: {
+      styleOverrides: { root: { '&.Mui-focusVisible': focusRing } },
+    },
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: { root: { borderRadius: 9, minHeight: 42 } },
     },
-    MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 9 } } },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: { borderRadius: 9 },
+        notchedOutline: { borderColor: 'var(--mui-palette-action-active)' },
+      },
+    },
     MuiCssBaseline: {
       styleOverrides: {
         body: { margin: 0 },
-        ':focus-visible': { outline: '3px solid #72a28c', outlineOffset: 3 },
+        'a:focus-visible': focusRing,
       },
     },
   },

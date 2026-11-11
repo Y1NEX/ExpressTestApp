@@ -117,7 +117,6 @@ export function HomePage() {
             display: 'grid',
             placeItems: 'center',
             p: 4,
-            borderRadius: 3,
           }}
         >
           <Stack
@@ -126,7 +125,7 @@ export function HomePage() {
           >
             <Box
               sx={{
-                bgcolor: 'primary.light',
+                bgcolor: 'action.selected',
                 color: 'primary.main',
                 p: 2,
                 display: 'flex',

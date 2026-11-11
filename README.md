@@ -47,7 +47,7 @@ npm run dev:web
 
 Öffne **http://localhost:5173** und melde dich mit dem über `owner:create` angelegten Nutzer an. Vite leitet `/api` an die lokale API weiter; Cookies und CSRF-Schutz funktionieren unter derselben Browser-Origin. `WEB_ORIGIN` in `.env` muss dazu `http://localhost:5173` sein. Die Seite bietet Login, Neuladen mit bestehender Session, Abmelden sowie einen leeren Platz für die spätere Sammlung. Sie zeigt keine erfundenen Snippets oder Zähler.
 
-Das Design liegt in [`apps/web/src/theme.ts`](apps/web/src/theme.ts): Palette, Schrift, Rundungen und MUI-Komponentenvorgaben. Seitenlayout und Abstände stehen direkt in den jeweiligen Seiten. Für die gebaute Frontend-Version: `npm run build`, danach `npm run preview:web` statt des Dev-Servers. Vite Preview dient zur lokalen Prüfung, nicht als Produktionsserver.
+Das Design liegt in [`apps/web/src/theme.ts`](apps/web/src/theme.ts). MUI wählt die helle oder dunkle Palette anhand der Systemeinstellung. Schrift, Rundungen und Komponentenvorgaben gelten in beiden Modi. Seitenlayout und Abstände stehen direkt in den jeweiligen Seiten. Für die gebaute Frontend-Version: `npm run build`, danach `npm run preview:web` statt des Dev-Servers. Vite Preview dient zur lokalen Prüfung, nicht als Produktionsserver.
 
 API separat prüfen:
 

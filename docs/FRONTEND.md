@@ -45,6 +45,12 @@ Navigation verwendet feste interne Ziele `/` und `/login`. Es gibt keinen `redir
 
 Die Seiten werden über Route-Imports bei Bedarf geladen. Dadurch muss die Startseite den Formik-/Login-Code nicht sofort mitladen. Gemeinsame MUI-Komponenten und Theme bleiben geteilt.
 
+## Helles und dunkles Design
+
+In `theme.ts` bündelt MUI beide Paletten unter `colorSchemes`. CSS-Variablen wie `background.paper` werden je nach `prefers-color-scheme` automatisch mit der passenden Farbe belegt. So reagiert die Oberfläche auch bei einer laufenden Sitzung direkt auf einen Systemwechsel. Die interaktiven Elemente verwenden im dunklen Modus ein helleres Grün für den Kontrast. Die Terminalkarte im Logo behält ihr Dunkelgrün.
+
+`public/favicon.svg` ist zugleich das Logo in der App. Es verwendet dieselbe Medienabfrage für das Regalbrett und die Halter.
+
 ## React Router v7 ohne neue Architektur
 
 Ursprünglich war v6 vorgesehen. Nach deiner Freigabe verwendet die App die gepatchte Version **7.18.5**: Der v6-Zweig wurde beim Aufbau durch zwei moderate npm-Advisories markiert (GHSA-wrjc-x8rr-h8h6 und GHSA-337j-9hxr-rhxg). Der Wechsel beseitigt diese gemeldeten Abhängigkeiten, ohne das Arbeitsmodell zu ändern.

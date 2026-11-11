@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="11" fill="#265a4b"/><path d="m11 13 6 6-6 6m10 0h8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <style>
+    .shelf { fill: #3c4340; }
+    .brackets { fill: #cad1cd; }
+    .terminal { fill: #123c2c; }
+    @media (prefers-color-scheme: dark) {
+      .shelf { fill: #cad1cd; }
+      .brackets { fill: #3c4340; }
+      .terminal { stroke: #cad1cd; }
+    }
+  </style>
+  <path class="brackets" d="M10 36h7l-4.5 5H10zm24 0h7l-4.5 5H34z"/>
+  <rect class="shelf" x="3" y="33" width="42" height="4" rx="2"/>
+  <rect x="8" y="17" width="5" height="14" rx="1.5" fill="#3d745b"/>
+  <rect class="terminal" x="16" y="8" width="25" height="23" rx="4.5"/>
+  <path d="m22 16 5 3.5-5 3.5m9 0h5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
