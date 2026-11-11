@@ -9,3 +9,6 @@ backups/
 *.log
 .DS_Store
 .local-testing/
+.artifacts/
+playwright-report/
+test-results/

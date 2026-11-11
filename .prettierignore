@@ -3,3 +3,4 @@ packages/database/src/generated/
 dist/
 node_modules/
 backups/
+.artifacts/

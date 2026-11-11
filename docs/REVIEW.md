@@ -71,4 +71,4 @@ Beim Neustart trat der dokumentierte Docker-Socket-Fehler erneut auf. Der tempor
 - Gleichzeitige Änderungen desselben Felds: letzter Schreibzugriff gewinnt.
 - Feste Kategorien, einfache Teiltextsuche und Offset-Pagination.
 - API-Neustarts behalten Sessions, setzen aber den Login-Ratelimiter zurück.
-- Ein Schema- und API-PR; das Frontend folgt nach deinem Review.
+- Der Schema- und API-PR bleibt separat. Der darauf aufbauende zweite PR ergänzt Login und die leere Startseite; sein aktueller Prüfstand steht in [FRONTEND.md](FRONTEND.md).

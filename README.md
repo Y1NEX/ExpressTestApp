@@ -1,6 +1,6 @@
-# Snippet-Ablage – ExpressTestApp
+# SnippetShelf – ExpressTestApp
 
-Eine kleine persönliche Ablage für Befehle, Code und Text. Dieses PR liefert **nur Datenbank und Backend**. Ein Frontend folgt später mit Vite, React Router **v6**, Formik, MUI und Material React Table.
+Eine kleine persönliche Ablage für Befehle, Code und Text. **SnippetShelf** ist der Name der App; das Repository bleibt ExpressTestApp. Das Monorepo enthält den Snippet-Backend-Stand und ein bewusst kleines MUI-Frontend mit Login und leerer, geschützter Startseite. Vite, React Router **v7 im Data Mode**, Formik und die gemeinsamen Zod-Verträge bilden das Frontend. Die Snippet-Oberfläche mit Material React Table folgt separat.
 
 Du kannst Snippets erstellen, lesen, teilweise ändern, löschen, durchsuchen, nach Kategorie/Favorit filtern und sortiert seitenweise abrufen. Es gibt einen lokal angelegten Nutzer und einen Passport-Login mit Cookie-Session. Kopieren und Vorschau sind Aufgaben des späteren Frontends.
 
@@ -8,16 +8,16 @@ Du kannst Snippets erstellen, lesen, teilweise ändern, löschen, durchsuchen, n
 
 - Node.js 22 ab 22.13, npm 10 oder neuer; Node 22 wird in CI verwendet.
 - Docker Desktop mit **laufender Linux-Engine** und Docker Compose v2, oder eine eigene PostgreSQL-17-Instanz.
-- Freie lokale Ports: `5433` für PostgreSQL und `3000` für die API.
+- Freie lokale Ports: `5433` für PostgreSQL, `3000` für die API und `5173` für das Frontend. Browser-Tests verwenden zusätzlich `5174` und einen freien API-Port.
 
 Prisma bleibt bewusst auf der stabilen Version `7.10.1`. Die Pakete werden über `package-lock.json` reproduzierbar installiert.
 
 ## Lokal starten
 
-Alle folgenden Befehle im Repository-Hauptordner ausführen.
+Alle folgenden Befehle im Repository-Hauptordner ausführen. `.env` nur beim ersten Einrichten anlegen; eine vorhandene Datei mit deinen Zugangsdaten behalten.
 
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
 In `.env` **SESSION_SECRET und OWNER_PASSWORD ersetzen**. Ein Session-Secret erzeugst du mit:
@@ -42,6 +42,16 @@ Die Startmeldung ist strukturiertes JSON mit `event: "server.listening"`, `host:
 In einem zweiten Terminal:
 
 ```powershell
+npm run dev:web
+```
+
+Öffne **http://localhost:5173** und melde dich mit dem über `owner:create` angelegten Nutzer an. Vite leitet `/api` an die lokale API weiter; Cookies und CSRF-Schutz funktionieren unter derselben Browser-Origin. `WEB_ORIGIN` in `.env` muss dazu `http://localhost:5173` sein. Die Seite bietet Login, Neuladen mit bestehender Session, Abmelden sowie einen leeren Platz für die spätere Sammlung. Sie zeigt keine erfundenen Snippets oder Zähler.
+
+Das Design liegt in [`apps/web/src/theme.ts`](apps/web/src/theme.ts). MUI wählt die helle oder dunkle Palette anhand der Systemeinstellung. Schrift, Rundungen und Komponentenvorgaben gelten in beiden Modi. Seitenlayout und Abstände stehen direkt in den jeweiligen Seiten. Für die gebaute Frontend-Version: `npm run build`, danach `npm run preview:web` statt des Dev-Servers. Vite Preview dient zur lokalen Prüfung, nicht als Produktionsserver.
+
+API separat prüfen:
+
+```powershell
 Invoke-RestMethod http://127.0.0.1:3000/health
 Invoke-RestMethod http://127.0.0.1:3000/ready
 npm run smoke
@@ -57,12 +67,13 @@ Für Entwicklung mit automatischem API-Neustart: `npm run dev`. Nach Änderungen
 
 ```text
 apps/api/                       Express, Passport, HTTP-Middleware, Snippet-Service
+apps/web/                       Vite, React Router, Formik, MUI, Browser-Tests
 packages/contracts/             Zod-Eingaben und öffentliche TypeScript-Typen
 packages/database/              Prisma-Schema, SQL-Migration, PostgreSQL-Adapter
 docs/                           API-Beispiele, Lern-Doku, Backup- und Review-Anleitung
 ```
 
-`api` verwendet `contracts` und `database`. `contracts` kennt weder Express noch Prisma und enthält gemeinsame **Request-, Response- und Fehler-Schemas**. Öffentliche Typen werden daraus mit `z.infer` abgeleitet. Das spätere Frontend kann dieselben Verträge verwenden. Der Prisma-Client wird generiert und nicht eingecheckt.
+`api` verwendet `contracts` und `database`. `contracts` kennt weder Express noch Prisma und enthält gemeinsame **Request-, Response- und Fehler-Schemas**. Öffentliche Typen werden daraus mit `z.infer` abgeleitet. Das Frontend verwendet dieselben Verträge für Login und Antwortprüfung. Nur sein Test-Runner greift für isolierte Fixtures auf Backend und Datenbank zu; Browser-Code darf diese Pakete nicht importieren. Der Prisma-Client wird generiert und nicht eingecheckt.
 
 Die erste Funktionalität ist vollständig getrennt: **Route → Service → Repository**. Die Route prüft Eingaben und Antwortverträge, der Service enthält Anwendungsregeln und DTO-Konvertierung, das Repository kapselt Prisma. ESLint schützt die Schichtgrenze des Services. Ein späterer NestJS-Wechsel kann Verträge und Datenmodell übernehmen; HTTP- und Auth-Anbindung werden dann bewusst angepasst.
 
@@ -117,18 +128,21 @@ npm run format:check
 npm run check
 npm test
 npm run smoke
+npx playwright install chromium
+npm run test:web
 ```
 
 - `check`: prüft ESLint und Schichtgrenzen, baut alle Pakete und prüft zusätzlich Tests sowie Hilfsskripte mit TypeScript.
 - `test:unit`: Validierung, Konfiguration, Passwort-Hashing; ohne Datenbank ausführbar.
 - `test:integration`: legt eine zufällig benannte Testdatenbank an, migriert sie und testet echte HTTP-Requests. Danach prüft ein automatischer Backup-Roundtrip Inhalte, Migrationen, ausgelassene Sessions und eine falsche Prüfsumme. Test- und Restore-Datenbanken werden anschließend entfernt. Der lokale Datenbanknutzer benötigt `CREATEDB`; der Compose-Entwicklungsnutzer hat diese Berechtigung.
 - `smoke`: prüft den separat gestarteten API-Prozess. Die Integrationstests starten ihren eigenen HTTP-Server auf einem freien Port.
+- `test:web`: prüft Login, Neuladen, Logout, Cookie-Eigenschaften, Fehlerfälle, Tastaturbedienung und Mobilansicht mit Chromium und einer eigenen Testdatenbank. Siehe [docs/FRONTEND.md](docs/FRONTEND.md).
 
 Die Unit-/Vertragstests bauen ihre benötigten Pakete selbst und benötigen keinen laufenden Datenbankserver; die HTTP-Middleware-Tests verwenden lokale TCP-Ports. Für die vollständige Integrationsteststrecke Docker Compose starten. Bei eigener nativer PostgreSQL-Instanz `PG_TOOLS_BIN` auf den Ordner mit passenden `pg_dump`/`pg_restore`-Programmen setzen; der Backup-Test verwendet dann den nativen Modus.
 
 Das `minimatch`-Override betrifft die Entwicklungswerkzeuge und zieht die gepatchte Hauptversion ein. `npm audit` wird auch für die Entwicklungsabhängigkeiten geprüft; das Override bei zukünftigen Tool-Updates erneut bewerten.
 
-GitHub Actions führt Formatprüfung, TypeScript-Prüfung, Migrationen, Tests, API-Start sowie einen Docker-Backup-/Restore-Durchlauf aus. Der aktuelle Prüfstand und die manuelle Review-Reihenfolge stehen in [docs/REVIEW.md](docs/REVIEW.md).
+GitHub Actions führt Formatprüfung, TypeScript-Prüfung, Migrationen, Backend- und Browser-Tests, API-Start sowie einen Docker-Backup-/Restore-Durchlauf aus. Der Backend-Prüfstand steht in [docs/REVIEW.md](docs/REVIEW.md); Frontend-Aufbau und Prüfanleitung in [docs/FRONTEND.md](docs/FRONTEND.md).
 
 ## Backup und Restore
 
@@ -145,7 +159,7 @@ Das Backup liegt mit SHA-256-Prüfsumme unter `backups/`. Restore erzeugt **imme
 
 Starte mit [docs/BACKEND.md](docs/BACKEND.md). Dort werden Request-Ablauf, PATCH-Regeln, Besitzerfilter, Transaktionen, Session-Login, CSRF und SQL-Migration erklärt, mit kleinen Übungsaufgaben.
 
-Der Umfang dieses Backends ist abgeschlossen mit CRUD und Login. CASL, Frontend, KI-/MCP-Anbindung, Generatoren, Dateiuploads und Tags sind mögliche separate Erweiterungen.
+Der Umfang dieses Backends ist abgeschlossen mit CRUD und Login. Das erste Frontend bietet Anmeldung und eine leere Startseite. Snippet-Tabellen, CASL, KI-/MCP-Anbindung, Generatoren, Dateiuploads und Tags sind mögliche separate Erweiterungen.
 
 ## Häufige Startprobleme
 
