@@ -39,7 +39,7 @@ export async function apiRequest<T>(
   path: string,
   schema: z.ZodType<T>,
   options: {
-    method?: 'GET' | 'POST';
+    method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
     body?: unknown;
     csrfToken?: string;
     signal?: AbortSignal;

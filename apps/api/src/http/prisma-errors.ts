@@ -24,12 +24,19 @@ const unavailableCodes = new Set([
 ]);
 export function mapPrismaError(error: unknown): ApplicationError | null {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    if (error.code === 'P2039') {
+    if (error.code === 'P2039' || error.code === 'P2010') {
       const adapter = error.meta?.driverAdapterError;
       const cause =
         adapter && typeof adapter === 'object' && 'cause' in adapter
           ? adapter.cause
           : null;
+      if (
+        cause &&
+        typeof cause === 'object' &&
+        'kind' in cause &&
+        cause.kind === 'DatabaseNotReachable'
+      )
+        return new ApplicationError('DATABASE_UNAVAILABLE');
       const sqlState =
         cause && typeof cause === 'object' && 'originalCode' in cause
           ? cause.originalCode

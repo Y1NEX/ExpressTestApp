@@ -18,6 +18,7 @@ function toDto(record: SnippetRecord): Snippet {
 
 export function snippetService(repository: SnippetRepository) {
   return {
+    labels: (ownerId: string) => repository.labels(ownerId),
     async create(ownerId: string, input: CreateSnippet): Promise<Snippet> {
       return toDto(await repository.create(ownerId, input));
     },

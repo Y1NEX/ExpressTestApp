@@ -7,12 +7,11 @@ import {
   Button,
   Container,
   Divider,
-  Paper,
   Stack,
   Typography,
 } from '@mui/material';
 import LogoutRounded from '@mui/icons-material/LogoutRounded';
-import BookmarksOutlined from '@mui/icons-material/BookmarksOutlined';
+import { Shelf } from '../snippets/Shelf';
 import type { PublicUser } from '@snippet/contracts';
 import { logout } from '../auth/api';
 import { errorMessage } from '../api/client';
@@ -100,51 +99,7 @@ export function HomePage() {
             {failure}
           </Alert>
         )}
-        <Typography variant="overline" color="primary">
-          DEIN PERSÖNLICHER PLATZ
-        </Typography>
-        <Typography variant="h1" sx={{ mt: 1, mb: 1.5 }}>
-          Willkommen in SnippetShelf.
-        </Typography>
-        <Typography color="text.secondary">
-          Weniger suchen. Mehr wiederfinden.
-        </Typography>
-        <Paper
-          variant="outlined"
-          sx={{
-            mt: 5,
-            minHeight: { xs: 310, md: 370 },
-            display: 'grid',
-            placeItems: 'center',
-            p: 4,
-          }}
-        >
-          <Stack
-            spacing={2}
-            sx={{ alignItems: 'center', maxWidth: 350, textAlign: 'center' }}
-          >
-            <Box
-              sx={{
-                bgcolor: 'action.selected',
-                color: 'primary.main',
-                p: 2,
-                display: 'flex',
-                borderRadius: '18px',
-                mb: 1,
-              }}
-            >
-              <BookmarksOutlined sx={{ fontSize: 30 }} />
-            </Box>
-            <Typography variant="h2">Raum für deine Sammlung.</Typography>
-            <Typography
-              color="text.secondary"
-              variant="body2"
-              sx={{ lineHeight: 1.8 }}
-            >
-              Hier finden deine Snippets, Befehle und Textbausteine ihren Platz.
-            </Typography>
-          </Stack>
-        </Paper>
+        <Shelf />
       </Container>
       <Container component="footer" maxWidth="lg" sx={{ pb: 3 }}>
         <Divider sx={{ mb: 2.5 }} />

@@ -21,7 +21,7 @@ async function signIn(page: Page) {
   await fillLogin(page);
   await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'Willkommen in SnippetShelf.' }),
+    page.getByRole('heading', { name: 'Meine Snippets' }),
   ).toBeVisible();
 }
 const failureBody = (code: string) => ({
@@ -87,7 +87,7 @@ test('disables the form while login is pending', async ({ page }) => {
   if (!pending) throw new Error('Expected pending login request');
   await pending.continue();
   await expect(
-    page.getByRole('heading', { name: 'Willkommen in SnippetShelf.' }),
+    page.getByRole('heading', { name: 'Meine Snippets' }),
   ).toBeVisible();
 });
 
@@ -140,7 +140,7 @@ test('keeps login on reload, redirects authenticated login visits, and invalidat
   await signIn(page);
   await page.reload();
   await expect(
-    page.getByRole('heading', { name: 'Willkommen in SnippetShelf.' }),
+    page.getByRole('heading', { name: 'Meine Snippets' }),
   ).toBeVisible();
   await expect(page.getByText(credentials.email)).toBeVisible();
   await page.screenshot({
@@ -200,7 +200,7 @@ test('supports keyboard login, password visibility, and a narrow mobile layout',
   });
   await page.getByLabel(/^Passwort(?:\s*\*)?$/).press('Enter');
   await expect(
-    page.getByRole('heading', { name: 'Willkommen in SnippetShelf.' }),
+    page.getByRole('heading', { name: 'Meine Snippets' }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -242,7 +242,7 @@ test('applies the dark system palette to login and switches the signed-in page l
   });
   await signIn(page);
   const heading = page.getByRole('heading', {
-    name: 'Willkommen in SnippetShelf.',
+    name: 'Meine Snippets',
   });
   await expect(body).toHaveCSS('background-color', 'rgb(16, 20, 18)');
   await page.screenshot({

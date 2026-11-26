@@ -1,8 +1,8 @@
-# SnippetShelf – ExpressTestApp
+# SnippetShelf
 
-Eine kleine persönliche Ablage für Befehle, Code und Text. **SnippetShelf** ist der Name der App; das Repository bleibt ExpressTestApp. Das Monorepo enthält den Snippet-Backend-Stand und ein bewusst kleines MUI-Frontend mit Login und leerer, geschützter Startseite. Vite, React Router **v7 im Data Mode**, Formik und die gemeinsamen Zod-Verträge bilden das Frontend. Die Snippet-Oberfläche mit Material React Table folgt separat.
+Persönliche Sammlung für Code, Befehle und Textbausteine mit Login, PostgreSQL und einer responsiven React-Oberfläche. Erstelle eigene Snippets oder wähle eine der vier bearbeitbaren Vorlagen für Git, Docker, PostgreSQL und die Browser-Konsole. Vorlagen werden erst beim Speichern in deine Sammlung übernommen.
 
-Du kannst Snippets erstellen, lesen, teilweise ändern, löschen, durchsuchen, nach Kategorie/Favorit filtern und sortiert seitenweise abrufen. Es gibt einen lokal angelegten Nutzer und einen Passport-Login mit Cookie-Session. Kopieren und Vorschau sind Aufgaben des späteren Frontends.
+Suche in Titel und Inhalt, markiere Favoriten oder filtere nach Kategorie und Ausführungsumgebung. Labels wie `bash`, `powershell` und `postgresql` kannst du selbst vergeben. Die Gruppenansicht zeigt einen Befehl unter jedem passenden Label auf der aktuellen Seite. Kopieren übernimmt auch Einrückungen und Zeilenumbrüche.
 
 ## Voraussetzungen
 
@@ -45,7 +45,7 @@ In einem zweiten Terminal:
 npm run dev:web
 ```
 
-Öffne **http://localhost:5173** und melde dich mit dem über `owner:create` angelegten Nutzer an. Vite leitet `/api` an die lokale API weiter; Cookies und CSRF-Schutz funktionieren unter derselben Browser-Origin. `WEB_ORIGIN` in `.env` muss dazu `http://localhost:5173` sein. Die Seite bietet Login, Neuladen mit bestehender Session, Abmelden sowie einen leeren Platz für die spätere Sammlung. Sie zeigt keine erfundenen Snippets oder Zähler.
+Öffne **http://localhost:5173** und melde dich mit dem über `owner:create` angelegten Nutzer an. Vite leitet `/api` an die lokale API weiter; Cookies und CSRF-Schutz funktionieren unter derselben Browser-Origin. `WEB_ORIGIN` in `.env` muss dazu `http://localhost:5173` sein.
 
 Das Design liegt in [`apps/web/src/theme.ts`](apps/web/src/theme.ts). MUI wählt die helle oder dunkle Palette anhand der Systemeinstellung. Schrift, Rundungen und Komponentenvorgaben gelten in beiden Modi. Seitenlayout und Abstände stehen direkt in den jeweiligen Seiten. Für die gebaute Frontend-Version: `npm run build`, danach `npm run preview:web` statt des Dev-Servers. Vite Preview dient zur lokalen Prüfung, nicht als Produktionsserver.
 
@@ -82,7 +82,7 @@ Die erste Funktionalität ist vollständig getrennt: **Route → Service → Rep
 | Bereich       | Entscheidung                                                                               |
 | ------------- | ------------------------------------------------------------------------------------------ |
 | Nutzer        | UUID, normalisierte eindeutige E-Mail, Passwort-Hash, Erstellungszeit                      |
-| Snippet       | UUID, Besitzer, Titel, Inhalt, Kategorie, Favorit, Zeitstempel                             |
+| Snippet       | UUID, Besitzer, Titel, Inhalt, Kategorie, Labels, Favorit, Zeitstempel                     |
 | Session       | Session-ID, JSON-Sitzungsdaten, Ablaufzeit; gespeichert in PostgreSQL                      |
 | Kategorien    | `GIT`, `DOCKER`, `SQL`, `JAVASCRIPT`, `TYPESCRIPT`, `OTHER`                                |
 | Neue Snippets | Kategorie `OTHER`, Favorit `false`                                                         |
@@ -159,7 +159,7 @@ Das Backup liegt mit SHA-256-Prüfsumme unter `backups/`. Restore erzeugt **imme
 
 Starte mit [docs/BACKEND.md](docs/BACKEND.md). Dort werden Request-Ablauf, PATCH-Regeln, Besitzerfilter, Transaktionen, Session-Login, CSRF und SQL-Migration erklärt, mit kleinen Übungsaufgaben.
 
-Der Umfang dieses Backends ist abgeschlossen mit CRUD und Login. Das erste Frontend bietet Anmeldung und eine leere Startseite. Snippet-Tabellen, CASL, KI-/MCP-Anbindung, Generatoren, Dateiuploads und Tags sind mögliche separate Erweiterungen.
+Frontend und Browser-Prüfungen sind in [docs/FRONTEND.md](docs/FRONTEND.md) beschrieben.
 
 ## Häufige Startprobleme
 

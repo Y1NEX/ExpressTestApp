@@ -25,9 +25,24 @@ const content = postgresText
     message: 'Content must not be blank',
   });
 
+const labelSchema = postgresText
+  .trim()
+  .toLowerCase()
+  .min(1)
+  .max(32)
+  .regex(/^[\p{L}\p{N}][\p{L}\p{N} ._+#-]*$/u);
+const labelsSchema = z
+  .array(labelSchema)
+  .max(12)
+  .transform((values) => [...new Set(values)]);
+export const labelListResponseSchema = z.strictObject({
+  data: z.array(labelSchema),
+});
+
 export const createSnippetSchema = z.strictObject({
   title,
   content,
+  labels: labelsSchema.default([]),
   category: categorySchema.default('OTHER'),
   favorite: z.boolean().default(false),
 });
@@ -35,6 +50,7 @@ export const createSnippetSchema = z.strictObject({
 // Deliberately no defaults here: omitted PATCH fields must remain unchanged.
 export const updateSnippetSchema = z
   .strictObject({
+    labels: labelsSchema.optional(),
     title: title.optional(),
     content: content.optional(),
     category: categorySchema.optional(),
@@ -57,6 +73,7 @@ const queryInteger = (maximum: number) =>
     .transform(Number)
     .pipe(z.number().int().min(1).max(maximum));
 export const listSnippetsSchema = z.strictObject({
+  label: labelSchema.optional(),
   search: postgresText.trim().max(200).optional(),
   category: categorySchema.optional(),
   favorite: queryBoolean.optional(),
@@ -98,6 +115,7 @@ export const publicUserSchema = z.strictObject({
 });
 export const snippetSchema = z.strictObject({
   id: z.uuid(),
+  labels: labelsSchema,
   title,
   content,
   category: categorySchema,

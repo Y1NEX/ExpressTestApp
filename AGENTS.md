@@ -1,6 +1,6 @@
-# ExpressTestApp working agreement
+# SnippetShelf working agreement
 
-This is a small personal learning app named SnippetShelf. The current frontend scope is explicitly limited to login and a plain protected homepage with MUI and Formik. Snippet UI features require a separate request. The user approved patched React Router v7 while retaining the existing data-router structure, loaders and route guards; do not introduce framework mode or SSR.
+This is a small personal learning app named SnippetShelf. The protected collection uses MUI and Formik and shares the API contracts for snippet editing and execution labels. The user approved patched React Router v7 while retaining the existing data-router structure, loaders and route guards; do not introduce framework mode or SSR.
 
 ## Boundaries
 

@@ -11,6 +11,7 @@ export type SnippetRecord = Omit<Snippet, 'createdAt' | 'updatedAt'> & {
   updatedAt: Date;
 };
 export interface SnippetRepository {
+  labels(ownerId: string): Promise<string[]>;
   create(ownerId: string, input: CreateSnippet): Promise<SnippetRecord>;
   list(
     ownerId: string,
@@ -28,6 +29,7 @@ export interface SnippetRepository {
 const publicFields = {
   id: true,
   title: true,
+  labels: true,
   content: true,
   category: true,
   favorite: true,
@@ -37,6 +39,12 @@ const publicFields = {
 
 export function createSnippetRepository(db: PrismaClient): SnippetRepository {
   return {
+    async labels(ownerId: string) {
+      const rows = await db.$queryRaw<{ label: string }[]>`
+        SELECT DISTINCT unnest(labels) AS label FROM snippets
+        WHERE owner_id = ${ownerId}::uuid ORDER BY label`;
+      return rows.map((row) => row.label);
+    },
     create(ownerId: string, input: CreateSnippet) {
       return db.snippet.create({
         data: { ...input, ownerId },
@@ -49,6 +57,7 @@ export function createSnippetRepository(db: PrismaClient): SnippetRepository {
       const search = input.search?.replace(/[\\%_]/g, '\\$&');
       const where: Prisma.SnippetWhereInput = {
         ownerId,
+        labels: input.label ? { has: input.label } : undefined,
         category: input.category,
         favorite: input.favorite,
         ...(search

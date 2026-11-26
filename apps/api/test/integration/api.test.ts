@@ -280,6 +280,40 @@ describe('snippet CRUD and PATCH edge cases', () => {
     );
     await agent.get(result.headers.location!).expect(200, result.body);
   });
+  it('filters and lists only owned labels and supports clearing the final use', async () => {
+    const created = await makeSnippet({ labels: [' Linux ', 'linux', 'bash'] });
+    await db.snippet.create({
+      data: {
+        ownerId: otherId,
+        title: 'Other',
+        content: 'other',
+        labels: ['hidden'],
+      },
+    });
+    await request(server).get('/api/snippets/labels').expect(401);
+    await agent
+      .get('/api/snippets/labels')
+      .expect(200, { data: ['bash', 'linux'] });
+    const path = '/api/snippets/' + created.body.data.id;
+    await agent
+      .patch(path)
+      .set('X-CSRF-Token', token)
+      .send({ favorite: true })
+      .expect(200);
+    const result = await agent
+      .get('/api/snippets')
+      .query({ label: 'LINUX', favorite: 'true' })
+      .expect(200);
+    expect(result.body.data.map((item: { id: string }) => item.id)).toEqual([
+      created.body.data.id,
+    ]);
+    await agent
+      .patch(path)
+      .set('X-CSRF-Token', token)
+      .send({ labels: [] })
+      .expect(200);
+    await agent.get('/api/snippets/labels').expect(200, { data: [] });
+  });
   it('accepts duplicate titles and stores code as text', async () => {
     const code = '<script>alert("test")</script>\n💻 ü';
     await makeSnippet({ title: 'Duplicate', content: code });
