@@ -35,6 +35,14 @@ for (const width of [360, 768, 1440]) {
       'Git-Status kompakt anzeigen',
     );
     await page.getByRole('dialog').getByLabel('Titel').fill('Eigener Entwurf');
+    await page.getByRole('combobox', { name: 'Vorlage' }).click();
+    await page
+      .getByRole('option', { name: 'Laufende Container auflisten' })
+      .click();
+    await page.getByRole('button', { name: 'Weiter bearbeiten' }).click();
+    await expect(page.getByRole('dialog').getByLabel('Titel')).toHaveValue(
+      'Eigener Entwurf',
+    );
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Weiter bearbeiten' }).click();
     await expect(page.getByRole('dialog').getByLabel('Titel')).toHaveValue(
@@ -60,6 +68,12 @@ for (const width of [360, 768, 1440]) {
     await dialog
       .getByLabel('Labels', { exact: true })
       .fill(' Bash, Linux, bash');
+    await page.route('**/api/snippets', (route) => route.abort(), { times: 1 });
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog.getByRole('alert')).toContainText(
+      'Server ist gerade nicht erreichbar',
+    );
+    await expect(dialog.getByLabel('Code oder Befehl')).toHaveValue(code);
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     const card = page.getByRole('article', { name: title, exact: true });
     await expect(card).toBeVisible();

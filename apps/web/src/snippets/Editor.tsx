@@ -17,13 +17,23 @@ import {
 import {
   categories,
   createSnippetSchema,
-  type Category,
+  type CreateSnippet,
   type UpdateSnippet,
   type Snippet,
 } from '@snippet/contracts';
 import { errorMessage } from '../api/client';
 import { saveSnippet } from './api';
 import { categoryNames, templates } from './templates';
+
+function editorValues(source?: CreateSnippet) {
+  return {
+    title: source?.title ?? '',
+    content: source?.content ?? '',
+    category: source?.category ?? 'OTHER',
+    favorite: source?.favorite ?? false,
+    labels: source?.labels.join(', ') ?? '',
+  };
+}
 
 export function Editor({
   snippet,
@@ -36,19 +46,15 @@ export function Editor({
   close: () => void;
   saved: () => void;
 }) {
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [pendingDiscard, setPendingDiscard] = useState<
+    'close' | { template: string }
+  >();
   const [failure, setFailure] = useState('');
   const [template, setTemplate] = useState(initialTemplate?.toString() ?? '');
   const source =
     snippet ??
     (initialTemplate === undefined ? undefined : templates[initialTemplate]);
-  const initialValues = {
-    title: source?.title ?? '',
-    content: source?.content ?? '',
-    category: source?.category ?? ('OTHER' as Category),
-    favorite: source?.favorite ?? false,
-    labels: source?.labels.join(', ') ?? '',
-  };
+  const initialValues = editorValues(source);
   function parse(values: typeof initialValues) {
     return createSnippetSchema.safeParse({
       ...values,
@@ -108,8 +114,22 @@ export function Editor({
   });
   const error = (field: 'title' | 'content' | 'labels') =>
     form.touched[field] && form.errors[field];
+  function applyTemplate(choice: string) {
+    setTemplate(choice);
+    form.resetForm({
+      values: editorValues(
+        choice === '' ? undefined : templates[Number(choice)],
+      ),
+    });
+    setFailure('');
+  }
+  function discard() {
+    if (pendingDiscard === 'close') close();
+    else if (pendingDiscard) applyTemplate(pendingDiscard.template);
+    setPendingDiscard(undefined);
+  }
   function dismiss() {
-    if (form.dirty) setConfirmDiscard(true);
+    if (form.dirty) setPendingDiscard('close');
     else close();
   }
   return (
@@ -142,21 +162,8 @@ export function Editor({
                   value={template}
                   onChange={(event) => {
                     const choice = event.target.value;
-                    setTemplate(choice);
-                    const sample = templates[Number(choice)];
-                    if (choice && sample)
-                      void form.setValues({
-                        ...sample,
-                        labels: sample.labels.join(', '),
-                      });
-                    else
-                      void form.setValues({
-                        title: '',
-                        content: '',
-                        category: 'OTHER',
-                        favorite: false,
-                        labels: '',
-                      });
+                    if (form.dirty) setPendingDiscard({ template: choice });
+                    else applyTemplate(choice);
                   }}
                 >
                   <MenuItem value="">Ohne Vorlage</MenuItem>
@@ -233,20 +240,20 @@ export function Editor({
           </DialogActions>
         </form>
       </Dialog>
-      {confirmDiscard && (
+      {pendingDiscard && (
         <Dialog
           open
           aria-labelledby="discard-title"
-          onClose={() => setConfirmDiscard(false)}
+          onClose={() => setPendingDiscard(undefined)}
         >
           <DialogTitle id="discard-title">
             Ungespeicherte Änderungen verwerfen?
           </DialogTitle>
           <DialogActions>
-            <Button autoFocus onClick={() => setConfirmDiscard(false)}>
+            <Button autoFocus onClick={() => setPendingDiscard(undefined)}>
               Weiter bearbeiten
             </Button>
-            <Button color="error" onClick={close}>
+            <Button color="error" onClick={discard}>
               Verwerfen
             </Button>
           </DialogActions>
