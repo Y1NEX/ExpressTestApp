@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { CopyButton } from './CopyButton';
 import {
   Box,
   Button,
@@ -8,10 +8,8 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import ContentCopyRounded from '@mui/icons-material/ContentCopyRounded';
 import StarRounded from '@mui/icons-material/StarRounded';
 import StarBorderRounded from '@mui/icons-material/StarBorderRounded';
-import { tca } from '@itsezz/try-catch';
 import type { Snippet } from '@snippet/contracts';
 import { categoryNames } from './templates';
 
@@ -31,17 +29,6 @@ export function SnippetCard({
   toggleFavorite,
   filter,
 }: Props) {
-  const [copyMessage, setCopyMessage] = useState('');
-  async function copy() {
-    const result = await tca(async () =>
-      navigator.clipboard.writeText(snippet.content),
-    );
-    setCopyMessage(
-      result.ok
-        ? 'Kopiert'
-        : 'Kopieren fehlgeschlagen. Bitte markiere den Code und kopiere ihn manuell.',
-    );
-  }
   return (
     <Paper
       component="article"
@@ -120,14 +107,7 @@ export function SnippetCard({
         direction="row"
         sx={{ gap: 0.5, alignItems: 'center', flexWrap: 'wrap', mt: 'auto' }}
       >
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<ContentCopyRounded />}
-          onClick={() => void copy()}
-        >
-          Kopieren
-        </Button>
+        <CopyButton content={snippet.content} />
         <Button size="small" onClick={edit} disabled={busy}>
           Bearbeiten
         </Button>
@@ -135,9 +115,6 @@ export function SnippetCard({
           Löschen
         </Button>
       </Stack>
-      <Box role="status" sx={{ fontSize: 14, '&:empty': { display: 'none' } }}>
-        {copyMessage}
-      </Box>
     </Paper>
   );
 }

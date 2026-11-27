@@ -23,7 +23,8 @@ import { ApiError, errorMessage } from '../api/client';
 import { deleteSnippet, loadLabels, loadSnippets, saveSnippet } from './api';
 import { SnippetCard } from './SnippetCard';
 import { Editor } from './Editor';
-import { categoryNames } from './templates';
+import { CopyButton } from './CopyButton';
+import { categoryNames, templates } from './templates';
 
 const defaults = {
   search: '',
@@ -42,7 +43,8 @@ export function Shelf() {
   const [loadError, setLoadError] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
-  const [editor, setEditor] = useState<Snippet | 'new'>();
+  const [editor, setEditor] = useState<Snippet | 'new' | number>();
+  const [showTemplates, setShowTemplates] = useState(false);
   const [removing, setRemoving] = useState<Snippet>();
   const { search, category, label, favorites, page } = filters;
   useEffect(() => {
@@ -135,13 +137,18 @@ export function Shelf() {
         }}
       >
         <Typography variant="h1">Meine Snippets</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddRounded />}
-          onClick={() => setEditor('new')}
-        >
-          Neues Snippet
-        </Button>
+        <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
+          <Button variant="outlined" onClick={() => setShowTemplates(true)}>
+            Befehlsvorlagen
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddRounded />}
+            onClick={() => setEditor('new')}
+          >
+            Neues Snippet
+          </Button>
+        </Stack>
       </Stack>
       <Box component="section" aria-label="Sammlung filtern">
         <Box
@@ -312,12 +319,69 @@ export function Shelf() {
           }
         />
       )}
-      {editor && (
+      {showTemplates && (
+        <Dialog
+          open
+          fullWidth
+          maxWidth="sm"
+          aria-labelledby="templates-title"
+          onClose={() => setShowTemplates(false)}
+        >
+          <DialogTitle id="templates-title">Befehlsvorlagen</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={3}>
+              {templates.map((sample, index) => (
+                <Box
+                  component="article"
+                  aria-label={sample.title}
+                  key={sample.title}
+                >
+                  <Typography variant="h2">{sample.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {categoryNames[sample.category]} ·{' '}
+                    {sample.labels.join(', ')}
+                  </Typography>
+                  <Box
+                    component="pre"
+                    sx={{
+                      overflowX: 'auto',
+                      p: 1.5,
+                      bgcolor: 'action.selected',
+                    }}
+                  >
+                    <code>{sample.content}</code>
+                  </Box>
+                  <Stack
+                    direction="row"
+                    sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap' }}
+                  >
+                    <CopyButton content={sample.content} />
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        setShowTemplates(false);
+                        setEditor(index);
+                      }}
+                    >
+                      Als Snippet anpassen
+                    </Button>
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowTemplates(false)}>Schließen</Button>
+          </DialogActions>
+        </Dialog>
+      )}
+      {editor !== undefined && (
         <Editor
-          snippet={editor === 'new' ? undefined : editor}
+          snippet={typeof editor === 'object' ? editor : undefined}
+          initialTemplate={typeof editor === 'number' ? editor : undefined}
           close={() => setEditor(undefined)}
           saved={() => {
-            if (editor === 'new') setFilters(defaults);
+            if (typeof editor !== 'object') setFilters(defaults);
             setEditor(undefined);
             reload();
           }}

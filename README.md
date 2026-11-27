@@ -1,6 +1,6 @@
 # SnippetShelf
 
-Persönliche Sammlung für Code, Befehle und Textbausteine mit Login, PostgreSQL und einer responsiven React-Oberfläche. Erstelle eigene Snippets oder wähle eine der vier bearbeitbaren Vorlagen für Git, Docker, PostgreSQL und die Browser-Konsole. Vorlagen werden erst beim Speichern in deine Sammlung übernommen.
+Persönliche Sammlung für Code, Befehle und Textbausteine mit Login, PostgreSQL und einer responsiven React-Oberfläche. Erstelle eigene Snippets oder wähle eine der vier bearbeitbaren Vorlagen für Git, Docker, PostgreSQL und die Browser-Konsole. Unter **Befehlsvorlagen** siehst du Code und Ausführungsumgebung und kannst einen Befehl sofort kopieren. Mit **Als Snippet anpassen** öffnest du eine eigene Kopie im Editor. Vorlagen werden erst beim Speichern in deine Sammlung übernommen.
 
 Suche in Titel und Inhalt, markiere Favoriten oder filtere nach Kategorie und Ausführungsumgebung. Labels wie `bash`, `powershell` und `postgresql` kannst du selbst vergeben. Die Gruppenansicht zeigt einen Befehl unter jedem passenden Label auf der aktuellen Seite. Kopieren übernimmt auch Einrückungen und Zeilenumbrüche.
 

@@ -27,21 +27,27 @@ import { categoryNames, templates } from './templates';
 
 export function Editor({
   snippet,
+  initialTemplate,
   close,
   saved,
 }: {
   snippet?: Snippet;
+  initialTemplate?: number;
   close: () => void;
   saved: () => void;
 }) {
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [failure, setFailure] = useState('');
-  const [template, setTemplate] = useState('');
+  const [template, setTemplate] = useState(initialTemplate?.toString() ?? '');
+  const source =
+    snippet ??
+    (initialTemplate === undefined ? undefined : templates[initialTemplate]);
   const initialValues = {
-    title: snippet?.title ?? '',
-    content: snippet?.content ?? '',
-    category: snippet?.category ?? ('OTHER' as Category),
-    favorite: snippet?.favorite ?? false,
-    labels: snippet?.labels.join(', ') ?? '',
+    title: source?.title ?? '',
+    content: source?.content ?? '',
+    category: source?.category ?? ('OTHER' as Category),
+    favorite: source?.favorite ?? false,
+    labels: source?.labels.join(', ') ?? '',
   };
   function parse(values: typeof initialValues) {
     return createSnippetSchema.safeParse({
@@ -102,115 +108,150 @@ export function Editor({
   });
   const error = (field: 'title' | 'content' | 'labels') =>
     form.touched[field] && form.errors[field];
+  function dismiss() {
+    if (form.dirty) setConfirmDiscard(true);
+    else close();
+  }
   return (
-    <Dialog
-      open
-      fullWidth
-      maxWidth="sm"
-      aria-labelledby="editor-title"
-      onClose={form.isSubmitting ? undefined : close}
-    >
-      <DialogTitle id="editor-title">
-        {snippet ? 'Snippet bearbeiten' : 'Neues Snippet'}
-      </DialogTitle>
-      <form noValidate onSubmit={form.handleSubmit}>
-        <DialogContent dividers sx={{ maxHeight: '60dvh', overflowY: 'auto' }}>
-          <Stack
-            component="fieldset"
-            disabled={form.isSubmitting}
-            spacing={2.5}
-            sx={{ border: 0, p: 0, m: 0, minWidth: 0 }}
+    <>
+      <Dialog
+        open
+        fullWidth
+        maxWidth="sm"
+        aria-labelledby="editor-title"
+        onClose={form.isSubmitting ? undefined : dismiss}
+      >
+        <DialogTitle id="editor-title">
+          {snippet ? 'Snippet bearbeiten' : 'Neues Snippet'}
+        </DialogTitle>
+        <form noValidate onSubmit={form.handleSubmit}>
+          <DialogContent
+            dividers
+            sx={{ maxHeight: '60dvh', overflowY: 'auto' }}
           >
-            {!snippet && (
+            <Stack
+              component="fieldset"
+              disabled={form.isSubmitting}
+              spacing={2.5}
+              sx={{ border: 0, p: 0, m: 0, minWidth: 0 }}
+            >
+              {!snippet && (
+                <TextField
+                  select
+                  label="Vorlage"
+                  value={template}
+                  onChange={(event) => {
+                    const choice = event.target.value;
+                    setTemplate(choice);
+                    const sample = templates[Number(choice)];
+                    if (choice && sample)
+                      void form.setValues({
+                        ...sample,
+                        labels: sample.labels.join(', '),
+                      });
+                    else
+                      void form.setValues({
+                        title: '',
+                        content: '',
+                        category: 'OTHER',
+                        favorite: false,
+                        labels: '',
+                      });
+                  }}
+                >
+                  <MenuItem value="">Ohne Vorlage</MenuItem>
+                  {templates.map((sample, i) => (
+                    <MenuItem key={sample.title} value={String(i)}>
+                      {sample.title}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+              <TextField
+                autoFocus
+                required
+                label="Titel"
+                {...form.getFieldProps('title')}
+                error={Boolean(error('title'))}
+                helperText={error('title')}
+              />
               <TextField
                 select
-                label="Vorlage"
-                value={template}
-                onChange={(event) => {
-                  const choice = event.target.value;
-                  setTemplate(choice);
-                  const sample = templates[Number(choice)];
-                  if (choice && sample)
-                    void form.setValues({
-                      ...sample,
-                      labels: sample.labels.join(', '),
-                    });
-                  else void form.setValues(initialValues);
-                }}
+                label="Kategorie"
+                {...form.getFieldProps('category')}
               >
-                <MenuItem value="">Ohne Vorlage</MenuItem>
-                {templates.map((sample, i) => (
-                  <MenuItem key={sample.title} value={String(i)}>
-                    {sample.title}
+                {categories.map((key) => (
+                  <MenuItem key={key} value={key}>
+                    {categoryNames[key]}
                   </MenuItem>
                 ))}
               </TextField>
-            )}
-            <TextField
-              autoFocus
-              required
-              label="Titel"
-              {...form.getFieldProps('title')}
-              error={Boolean(error('title'))}
-              helperText={error('title')}
-            />
-            <TextField
-              select
-              label="Kategorie"
-              {...form.getFieldProps('category')}
+              <TextField
+                multiline
+                minRows={3}
+                maxRows={10}
+                required
+                label="Code oder Befehl"
+                {...form.getFieldProps('content')}
+                error={Boolean(error('content'))}
+                helperText={error('content')}
+                sx={{ '& textarea': { fontFamily: 'monospace' } }}
+              />
+              <TextField
+                label="Labels"
+                {...form.getFieldProps('labels')}
+                error={Boolean(error('labels'))}
+                helperText={
+                  error('labels') ||
+                  'Mit Komma trennen, z. B. linux, powershell oder browser-konsole.'
+                }
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    name="favorite"
+                    checked={form.values.favorite}
+                    onChange={form.handleChange}
+                  />
+                }
+                label="Als Favorit markieren"
+              />
+              {failure && <Alert severity="error">{failure}</Alert>}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={dismiss} disabled={form.isSubmitting}>
+              Abbrechen
+            </Button>
+            <Button
+              variant="contained"
+              type="submit"
+              disabled={form.isSubmitting}
             >
-              {categories.map((key) => (
-                <MenuItem key={key} value={key}>
-                  {categoryNames[key]}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              multiline
-              minRows={3}
-              maxRows={10}
-              required
-              label="Code oder Befehl"
-              {...form.getFieldProps('content')}
-              error={Boolean(error('content'))}
-              helperText={error('content')}
-              sx={{ '& textarea': { fontFamily: 'monospace' } }}
-            />
-            <TextField
-              label="Labels"
-              {...form.getFieldProps('labels')}
-              error={Boolean(error('labels'))}
-              helperText={
-                error('labels') ||
-                'Mit Komma trennen, z. B. linux, powershell oder browser-konsole.'
-              }
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="favorite"
-                  checked={form.values.favorite}
-                  onChange={form.handleChange}
-                />
-              }
-              label="Als Favorit markieren"
-            />
-            {failure && <Alert severity="error">{failure}</Alert>}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={close} disabled={form.isSubmitting}>
-            Abbrechen
-          </Button>
-          <Button
-            variant="contained"
-            type="submit"
-            disabled={form.isSubmitting}
-          >
-            Speichern
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+              Speichern
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+      {confirmDiscard && (
+        <Dialog
+          open
+          aria-labelledby="discard-title"
+          onClose={() => setConfirmDiscard(false)}
+        >
+          <DialogTitle id="discard-title">
+            Ungespeicherte Änderungen verwerfen?
+          </DialogTitle>
+          <DialogActions>
+            <Button autoFocus onClick={() => setConfirmDiscard(false)}>
+              Weiter bearbeiten
+            </Button>
+            <Button color="error" onClick={close}>
+              Verwerfen
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+    </>
   );
 }

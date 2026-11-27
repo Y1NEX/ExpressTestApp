@@ -21,6 +21,28 @@ for (const width of [360, 768, 1440]) {
     await page.getByLabel('E-Mail-Adresse').fill(email);
     await page.getByLabel(/^Passwort(?:\s*\*)?$/).fill(password);
     await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+    await page.getByRole('button', { name: 'Befehlsvorlagen' }).click();
+    const sample = page.getByRole('article', {
+      name: 'Git-Status kompakt anzeigen',
+    });
+    await sample.getByRole('button', { name: 'Kopieren' }).click();
+    await expect(sample.getByRole('status')).toHaveText('Kopiert');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      'git status --short --branch',
+    );
+    await sample.getByRole('button', { name: 'Als Snippet anpassen' }).click();
+    await expect(page.getByRole('dialog').getByLabel('Titel')).toHaveValue(
+      'Git-Status kompakt anzeigen',
+    );
+    await page.getByRole('dialog').getByLabel('Titel').fill('Eigener Entwurf');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Weiter bearbeiten' }).click();
+    await expect(page.getByRole('dialog').getByLabel('Titel')).toHaveValue(
+      'Eigener Entwurf',
+    );
+    await page.getByRole('button', { name: 'Abbrechen' }).click();
+    await page.getByRole('button', { name: 'Verwerfen', exact: true }).click();
+    await expect(page.getByText('Deine Sammlung ist noch leer')).toBeVisible();
     await page.getByRole('button', { name: 'Neues Snippet' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
