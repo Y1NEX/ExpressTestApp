@@ -1,5 +1,5 @@
 {
-  "name": "express-test-app",
+  "name": "snippetshelf",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -36,6 +36,9 @@
     "format:check": "prettier --check ."
   },
   "overrides": {
+    "@prisma/config": {
+      "effect": "3.22.5"
+    },
     "minimatch": "^11.0.5"
   },
   "devDependencies": {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   categories,
+  labelListResponseSchema,
   createSnippetSchema,
   listSnippetsSchema,
   snippetIdSchema,
@@ -17,6 +18,14 @@ import { respond } from '../http/respond.js';
 export function snippetRoutes(service: SnippetService) {
   const router = Router();
   router.use(requireAuth);
+  router.get(
+    '/labels',
+    asyncHandler(async (req, res) => {
+      respond(res, labelListResponseSchema, {
+        data: await service.labels(authenticatedUser(req).id),
+      });
+    }),
+  );
   router.get('/categories', (_req, res) =>
     respond(res, categoryListResponseSchema, { data: [...categories] }),
   );

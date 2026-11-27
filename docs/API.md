@@ -153,3 +153,9 @@ Nullbytes und isolierte Unicode-Surrogate in Titel, Inhalt und Suchtext sind ung
 ## Frontend-Anbindung
 
 `WEB_ORIGIN` ist standardmäßig `http://localhost:5173`. Das MUI-Frontend verwendet relative `/api`-Adressen; der Vite-Proxy leitet sie an `127.0.0.1:3000` weiter. Browserzugriffe erfolgen daher über `http://localhost:5173`. Requests verwenden `credentials: 'include'`. Vor Login und Logout wird jeweils ein frischer CSRF-Token geholt und als `X-CSRF-Token` gesendet. Cookies verwaltet der Browser; Passwörter, Session-IDs und Tokens werden nicht im Browser-Storage abgelegt. Details und Erweiterungspunkte stehen in [FRONTEND.md](FRONTEND.md).
+
+## Ausführungsumgebungen
+
+POST und PATCH akzeptieren `labels`, etwa `["linux", "bash"]`. Erlaubt sind bis zu zwölf Labels mit je 1–32 Zeichen. Die API trimmt sie, schreibt sie klein und entfernt Duplikate. Beim Erstellen ist die Vorgabe `[]`. Bei PATCH behält ein ausgelassenes Feld seinen bisherigen Wert, während `[]` alle Labels entfernt. Bestehende Snippets erhalten durch die Migration eine leere Liste.
+
+`GET /api/snippets/labels` liefert die alphabetisch sortierten Labels des angemeldeten Nutzers als `{ "data": ["bash", "linux"] }`. `GET /api/snippets?label=bash` filtert über alle Seiten und lässt sich mit Suche, Kategorie und Favoriten kombinieren.

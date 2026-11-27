@@ -13,6 +13,7 @@ describe('snippet contracts', () => {
     ).toEqual({
       title: 'SQL',
       content: '  SELECT 1;\n',
+      labels: [],
       category: 'OTHER',
       favorite: false,
     });
@@ -78,4 +79,25 @@ describe('snippet contracts', () => {
   });
   it('normalizes email before validating', () =>
     expect(emailSchema.parse(' OWNER@Example.COM ')).toBe('owner@example.com'));
+});
+
+describe('execution labels', () => {
+  it('normalizes and deduplicates labels, and allows explicitly clearing them', () => {
+    expect(
+      updateSnippetSchema.parse({
+        labels: [' PowerShell ', 'powershell', 'C++'],
+      }),
+    ).toEqual({ labels: ['powershell', 'c++'] });
+    expect(updateSnippetSchema.parse({ labels: [] })).toEqual({ labels: [] });
+    expect(listSnippetsSchema.parse({ label: ' Windows ' }).label).toBe(
+      'windows',
+    );
+  });
+  it.each(
+    [null, [' '], ['a,b'], ['a'.repeat(33)], Array(13).fill('linux')].map(
+      (labels) => ({ labels }),
+    ),
+  )('rejects invalid labels', ({ labels }) => {
+    expect(updateSnippetSchema.safeParse({ labels }).success).toBe(false);
+  });
 });

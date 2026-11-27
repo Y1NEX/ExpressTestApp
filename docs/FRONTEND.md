@@ -1,6 +1,8 @@
-# SnippetShelf: Login und erste Startseite
+# SnippetShelf im Browser
 
-Dieser zweite PR ergänzt nur die Anmeldung und eine leere Startseite. Die Snippet-Datenbank und API aus PR #1 bleiben die Grundlage. Die eigentliche Sammlung, Tabellen und Bearbeitungsdialoge folgen später.
+Die geschützte Sammlung unterstützt Suche, Kategorien, Favoriten und eigene Labels. Der Editor validiert Eingaben über denselben Zod-Vertrag wie die API. Vier optionale Vorlagen zeigen typische Befehle samt Ausführungsumgebung. Die Zwischenablage benötigt HTTPS oder localhost. Bei verweigertem Zugriff bleibt der Code zum Markieren sichtbar.
+
+Unter **Befehlsvorlagen** kannst du Befehle vor dem Anlegen einer eigenen Sammlung ansehen und kopieren. **Als Snippet anpassen** übernimmt die Vorlage in den Editor. Erst **Speichern** schreibt sie über die API. Beim Schließen des Editors oder beim Vorlagenwechsel fragt die App nach, sobald du eigene Änderungen gemacht hast. Schlägt das Speichern fehl, bleiben die Eingaben für einen erneuten Versuch erhalten.
 
 ## Dateien zum Lesen
 

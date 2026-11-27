@@ -33,6 +33,7 @@ model Snippet {
   ownerId   String   @map("owner_id") @db.Uuid
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   title     String   @db.VarChar(120)
+  labels    String[] @default([])
   content   String
   category  Category @default(OTHER)
   favorite  Boolean  @default(false)
